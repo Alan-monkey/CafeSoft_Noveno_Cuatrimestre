@@ -457,4 +457,100 @@ public function updateUsuario($id, $data)
 }
 
 
+
+// ============= MÉTODOS DE ML =============
+
+public function getMLEstadisticas()
+{
+    try {
+        $response = Http::timeout($this->timeout)
+            ->get($this->baseUrl . '/ml/estadisticas');
+
+        if ($response->successful()) {
+            return ['success' => true, 'data' => $response->json()['data'] ?? []];
+        }
+
+        return ['success' => false, 'error' => 'Modelo no disponible'];
+    } catch (\Exception $e) {
+        Log::error('PythonApiService::getMLEstadisticas: ' . $e->getMessage());
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+public function getClientesFrecuentes()
+{
+    try {
+        $response = Http::timeout($this->timeout)
+            ->get($this->baseUrl . '/ml/clientes-frecuentes');
+
+        if ($response->successful()) {
+            return ['success' => true, 'data' => $response->json()['data'] ?? []];
+        }
+
+        return ['success' => false, 'error' => 'Datos no disponibles'];
+    } catch (\Exception $e) {
+        Log::error('PythonApiService::getClientesFrecuentes: ' . $e->getMessage());
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+public function getProductosMes()
+{
+    try {
+        $response = Http::timeout($this->timeout)
+            ->get($this->baseUrl . '/ml/productos-mes');
+
+        if ($response->successful()) {
+            return ['success' => true, 'data' => $response->json()['data'] ?? []];
+        }
+
+        return ['success' => false, 'error' => 'Datos no disponibles'];
+    } catch (\Exception $e) {
+        Log::error('PythonApiService::getProductosMes: ' . $e->getMessage());
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+public function getPrediccionSemana()
+{
+    try {
+        $response = Http::timeout($this->timeout)
+            ->get($this->baseUrl . '/ml/prediccion-semana');
+
+        if ($response->successful()) {
+            return ['success' => true, 'data' => $response->json()['data'] ?? []];
+        }
+
+        return ['success' => false, 'error' => 'Datos no disponibles'];
+    } catch (\Exception $e) {
+        Log::error('PythonApiService::getPrediccionSemana: ' . $e->getMessage());
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+public function predecirVenta($cantidad, $precio)
+{
+    try {
+        $response = Http::timeout(120) // Spark puede tardar en iniciar
+            ->post($this->baseUrl . '/ml/predecir', [
+                'cantidad' => (float) $cantidad,
+                'precio'   => (float) $precio,
+            ]);
+
+        if ($response->successful()) {
+            return ['success' => true, 'data' => $response->json()['data'] ?? []];
+        }
+
+        $body = $response->json();
+        $errorMsg = $body['detail'] ?? $body['error'] ?? 'Error al predecir (HTTP ' . $response->status() . ')';
+        return ['success' => false, 'error' => $errorMsg];
+    } catch (\Illuminate\Http\Client\ConnectionException $e) {
+        Log::error('PythonApiService::predecirVenta (conexión): ' . $e->getMessage());
+        return ['success' => false, 'error' => 'No se pudo conectar con la API de predicción. ¿Está corriendo el servidor Python?'];
+    } catch (\Exception $e) {
+        Log::error('PythonApiService::predecirVenta: ' . $e->getMessage());
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
 }

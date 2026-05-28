@@ -4,6 +4,7 @@ use App\Http\Controllers\LibrosController;
 use App\Http\Controllers\ProductosController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\RegistrarseController;
+use App\Http\Controllers\VentasController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CarritoController;
 use App\Http\Controllers\BackupController;
@@ -88,7 +89,8 @@ Route::middleware(['auth:usuarios', 'check.user.type:0'])->group(function () {
     Route::get('/ventas/reportes', [App\Http\Controllers\VentasController::class, 'reportes'])->name('ventas.reportes');
     Route::get('/ventas/mesas/disponibles', [App\Http\Controllers\VentasController::class, 'mesasDisponibles'])->name('ventas.mesas.disponibles');
     Route::get('/ventas/{id}', [App\Http\Controllers\VentasController::class, 'show'])->name('ventas.show');
-    
+    Route::post('/ventas/predecir', [VentasController::class, 'predecir'])->name('ventas.predecir');
+
     // Rutas de registro (solo empleados)
     Route::get('/libros/registrarse', [RegistrarseController::class, 'registrarse'])->name('libros.registrarse');
     Route::post('/libros/registrarse', [RegistrarseController::class, 'registrar'])->name('libros.registrar');

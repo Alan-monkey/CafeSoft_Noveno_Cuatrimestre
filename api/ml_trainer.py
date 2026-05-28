@@ -56,10 +56,10 @@ def leer_ventas_pymongo(db):
 
 
 def leer_clientes_pymongo(db):
-    """Lee ventas de los últimos 30 días con usuario_id."""
-    fecha_limite = datetime.utcnow() - timedelta(days=30)
+    """Lee ventas del mes actual con usuario_id."""
+    inicio_mes = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     ventas = list(db["ventas"].find(
-        {"created_at": {"$gte": fecha_limite}, "usuario_id": {"$exists": True, "$ne": None}},
+        {"created_at": {"$gte": inicio_mes}, "usuario_id": {"$exists": True, "$ne": None}},
         {"usuario_id": 1, "total": 1, "created_at": 1}
     ))
 
@@ -79,9 +79,7 @@ def leer_clientes_pymongo(db):
         uid    = str(v.get("usuario_id", ""))
         total  = float(v.get("total", 0) or 0)
         nombre = usuarios_map.get(uid, "Desconocido")
-        fecha  = v.get("created_at")
-        semana = int(fecha.isocalendar()[1]) if fecha else 0
-        filas.append((uid, nombre, total, semana))
+        filas.append((uid, nombre, total))
 
     return filas
 
@@ -139,46 +137,38 @@ def entrenar(spark, db):
 
 
 def analizar_clientes(spark, db):
-    """Analiza clientes frecuentes con Spark y guarda clientes_frecuentes.json."""
+    """Analiza clientes frecuentes del mes actual con Spark y guarda clientes_frecuentes.json."""
     filas = leer_clientes_pymongo(db)
 
     if not filas:
-        print("⚠ Sin ventas de clientes en los últimos 30 días")
+        print("⚠ Sin ventas de clientes este mes")
         with open(os.path.join(os.path.dirname(__file__), "clientes_frecuentes.json"), "w") as f:
             json.dump([], f)
         return []
 
-    df = spark.createDataFrame(filas, ["usuario_id", "nombre", "total", "semana"])
+    df = spark.createDataFrame(filas, ["usuario_id", "nombre", "total"])
 
     resumen = df.groupBy("usuario_id", "nombre").agg(
         count("*").alias("num_compras"),
         spark_round(spark_sum("total"), 2).alias("total_gastado")
-    )
+    ).orderBy(col("num_compras").desc())
 
-    resumen = resumen.withColumn(
-        "frecuencia",
-        when(col("num_compras") >= 12, "Diario")
-        .when(col("num_compras") >= 4,  "Varias veces/semana")
-        .when(col("num_compras") >= 2,  "1 vez/semana")
-        .otherwise("Ocasional")
-    )
-
-    resultado = resumen.orderBy(col("num_compras").desc()).limit(10).collect()
+    resultado = resumen.collect()
 
     data = [
         {
+            "posicion":      i + 1,
             "nombre":        row["nombre"],
             "num_compras":   row["num_compras"],
-            "total_gastado": row["total_gastado"],
-            "frecuencia":    row["frecuencia"]
+            "total_gastado": float(row["total_gastado"])
         }
-        for row in resultado
+        for i, row in enumerate(resultado)
     ]
 
     with open(os.path.join(os.path.dirname(__file__), "clientes_frecuentes.json"), "w") as f:
         json.dump(data, f, ensure_ascii=False)
 
-    print(f"✓ Clientes frecuentes analizados | Top cliente: {data[0]['nombre'] if data else '—'} | Total clientes: {len(data)}")
+    print(f"✓ Clientes del mes analizados | Total: {len(data)} | Top: {data[0]['nombre'] if data else '—'}")
     return data
 
 
@@ -216,7 +206,7 @@ def analizar_productos_mes(spark, db):
 
     resumen = df.groupBy("nombre").agg(
         spark_sum("cantidad").alias("total_vendido")
-    ).orderBy(col("total_vendido").desc()).limit(5)
+    ).orderBy(col("total_vendido").desc()).limit(10)
 
     resultado = resumen.collect()
 
@@ -280,8 +270,24 @@ def predecir_productos_semana(spark, db):
 
     todos = resumen.collect()
 
-    mas_vendidos    = [{"nombre": r["nombre"], "prediccion": float(r["prediccion_semana"]), "total_mes": int(r["total_mes"])} for r in todos[:3]]
-    menos_vendidos  = [{"nombre": r["nombre"], "prediccion": float(r["prediccion_semana"]), "total_mes": int(r["total_mes"])} for r in todos[-3:]]
+    mas_vendidos   = [
+        {
+            "nombre":           r["nombre"],
+            "prediccion":       float(r["prediccion_semana"]),
+            "promedio_semanal": round(float(r["promedio_semanal"]), 1),
+            "total_mes":        int(r["total_mes"])
+        }
+        for r in todos[:5]
+    ]
+    menos_vendidos = [
+        {
+            "nombre":           r["nombre"],
+            "prediccion":       float(r["prediccion_semana"]),
+            "promedio_semanal": round(float(r["promedio_semanal"]), 1),
+            "total_mes":        int(r["total_mes"])
+        }
+        for r in todos[-5:]
+    ]
     menos_vendidos.reverse()
 
     data = {"mas_vendidos": mas_vendidos, "menos_vendidos": menos_vendidos}

@@ -17,3 +17,5 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+api/__pycache__/
+api/modelo_ventas/

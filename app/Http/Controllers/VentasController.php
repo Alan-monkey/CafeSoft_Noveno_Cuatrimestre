@@ -55,29 +55,55 @@ class VentasController extends Controller
         return response()->json($mesas);
     }
 
-    public function reportes()
-    {
-        $user = auth()->guard('usuarios')->user();
-        
-        // Ventas del día
-        $ventasHoy = Venta::whereDate('created_at', today())->get();
-        $totalHoy = $ventasHoy->sum('total');
-        
-        // Productos más vendidos
-        $productosVendidos = [];
-        foreach ($ventasHoy as $venta) {
-            foreach ($venta->productos as $producto) {
-                $nombre = $producto['nombre'];
-                if (!isset($productosVendidos[$nombre])) {
-                    $productosVendidos[$nombre] = 0;
-                }
-                $productosVendidos[$nombre] += $producto['cantidad'];
-            }
+
+
+public function reportes()
+{
+    $user = auth()->guard('usuarios')->user();
+
+    // Ventas del día
+    $ventasHoy = Venta::whereDate('created_at', today())->get();
+    $totalHoy  = $ventasHoy->sum('total');
+
+    // Productos más vendidos
+    $productosVendidos = [];
+    foreach ($ventasHoy as $venta) {
+        foreach ($venta->productos as $producto) {
+            $nombre = $producto['nombre'];
+            $productosVendidos[$nombre] = ($productosVendidos[$nombre] ?? 0) + $producto['cantidad'];
         }
-        
-        arsort($productosVendidos);
-        $masVendidos = array_slice($productosVendidos, 0, 5, true);
-        
-        return view('ventas.reportes', compact('user', 'ventasHoy', 'totalHoy', 'masVendidos'));
     }
+    arsort($productosVendidos);
+    $masVendidos = array_slice($productosVendidos, 0, 5, true);
+
+    // ML: estadísticas del modelo
+    $pythonApi   = app(\App\Services\PythonApiService::class);
+    $mlResponse  = $pythonApi->getMLEstadisticas();
+    $mlStats     = $mlResponse['success'] ? $mlResponse['data'] : null;
+
+    $clientesResponse = $pythonApi->getClientesFrecuentes();
+    $clientesFrecuentes = $clientesResponse['success'] ? $clientesResponse['data'] : [];
+
+    $productosMesResponse = $pythonApi->getProductosMes();
+    $productosMes = $productosMesResponse['success'] ? $productosMesResponse['data'] : [];
+
+    $prediccionResponse = $pythonApi->getPrediccionSemana();
+    $prediccionSemana = $prediccionResponse['success'] ? $prediccionResponse['data'] : null;
+
+    return view('ventas.reportes', compact('user', 'ventasHoy', 'totalHoy', 'masVendidos', 'mlStats', 'clientesFrecuentes', 'productosMes', 'prediccionSemana'));
+}
+
+public function predecir(Request $request)
+{
+    $request->validate([
+        'cantidad' => 'required|numeric|min:1',
+        'precio'   => 'required|numeric|min:1',
+    ]);
+
+    $pythonApi = app(\App\Services\PythonApiService::class);
+    $resultado = $pythonApi->predecirVenta($request->cantidad, $request->precio);
+
+    return response()->json($resultado);
+}
+
 }

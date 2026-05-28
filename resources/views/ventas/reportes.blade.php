@@ -147,6 +147,249 @@
             </div>
         </div>
     </div>
+
+    <!-- ===== TOP 5 PRODUCTOS DEL MES (Spark ML) ===== -->
+@if(count($productosMes) > 0)
+<div class="ml-section mt-4">
+    <h5 class="detalle-titulo">
+        <i class="fas fa-chart-bar me-2" style="color:#8B4513;"></i>
+        Top 5 Productos del Mes
+        <small class="ms-2" style="font-size:0.75rem;color:#a0856b;font-weight:400;">Análisis Spark ML · Top 10</small>
+    </h5>
+    <div class="grafico-card">
+        <div class="grafico-contenedor" style="height:280px;">
+            <canvas id="graficaProductosMes"></canvas>
+        </div>
+    </div>
+</div>
+@endif
+
+    <!-- ===== SECCIÓN ML ===== -->
+@if($mlStats)
+<div class="ml-section mt-4">
+    <h5 class="detalle-titulo">
+        <i class="fas fa-robot me-2" style="color:#8B4513;"></i>
+        Predicción de Ventas con IA
+    </h5>
+
+    <!-- Métricas del modelo -->
+    <div class="resumen-ventas mb-4">
+        <div class="resumen-card">
+            <div class="card-icono" style="background: linear-gradient(145deg,#8B4513,#A0522D);">
+                <i class="fas fa-brain"></i>
+            </div>
+            <div class="card-contenido">
+                <span class="card-label">Precisión del modelo</span>
+                <span class="card-valor">{{ number_format($mlStats['accuracy'] * 100, 1) }}%</span>
+            </div>
+        </div>
+        <div class="resumen-card">
+            <div class="card-icono" style="background: linear-gradient(145deg,#D4AF37,#c9a227);">
+                <i class="fas fa-database"></i>
+            </div>
+            <div class="card-contenido">
+                <span class="card-label">Ventas analizadas</span>
+                <span class="card-valor">{{ number_format($mlStats['total_registros']) }}</span>
+            </div>
+        </div>
+        <div class="resumen-card">
+            <div class="card-icono" style="background: linear-gradient(145deg,#28a745,#218838);">
+                <i class="fas fa-ruler-horizontal"></i>
+            </div>
+            <div class="card-contenido">
+                <span class="card-label">Umbral venta alta</span>
+                <span class="card-valor">${{ number_format($mlStats['umbral'], 2) }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario de predicción -->
+    <div class="grafico-card">
+        <h6 class="grafico-titulo">
+            <i class="fas fa-magic me-2"></i> Simular una venta
+        </h6>
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label" style="color:#5D4037;font-weight:600;">Cantidad</label>
+                <input type="number" id="ml-cantidad" class="form-control" min="1" value="3">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" style="color:#5D4037;font-weight:600;">Precio unitario ($)</label>
+                <input type="number" id="ml-precio" class="form-control" min="1" value="90">
+            </div>
+            <div class="col-md-4">
+                <button id="btn-predecir" class="btn w-100" style="background:#8B4513;color:white;border-radius:50px;padding:10px 20px;font-weight:600;">
+                    <i class="fas fa-bolt me-2"></i> Predecir
+                </button>
+            </div>
+        </div>
+
+        <!-- Resultado -->
+        <div id="ml-resultado" class="mt-4" style="display:none;">
+            <div id="ml-resultado-inner" class="p-4 rounded-4 text-center">
+                <div id="ml-icono" style="font-size:3rem;"></div>
+                <div id="ml-texto" style="font-size:1.4rem;font-weight:700;margin-top:10px;"></div>
+                <div id="ml-detalle" style="font-size:0.95rem;margin-top:5px;opacity:0.8;"></div>
+            </div>
+        </div>
+
+        <div id="ml-loading" style="display:none;" class="text-center mt-4">
+            <div class="spinner-border" style="color:#8B4513;"></div>
+            <p class="mt-2" style="color:#8B4513;">Consultando modelo...</p>
+        </div>
+    </div>
+</div>
+@else
+<div class="mt-4 p-4 rounded-4 text-center" style="background:#fff8f0;border:1px dashed #d9b382;">
+    <i class="fas fa-robot fa-2x mb-2" style="color:#d9b382;"></i>
+    <p style="color:#8B6B4F;margin:0;">El modelo ML no está disponible. Ejecuta <code>python ml_trainer.py</code> en WSL.</p>
+</div>
+@endif
+
+{{-- ===== TABLA CLIENTES FRECUENTES DEL MES ===== --}}
+@if(count($clientesFrecuentes) > 0)
+<div class="ml-section mt-4">
+    <h5 class="detalle-titulo">
+        <i class="fas fa-users me-2" style="color:#8B4513;"></i>
+        Clientes Frecuentes del Mes
+    </h5>
+    <div class="grafico-card">
+        <div class="table-responsive">
+            <table class="table detalle-table">
+                <thead>
+                    <tr>
+                        <th style="width:60px;">Pos.</th>
+                        <th>Cliente</th>
+                        <th class="text-center">Compras</th>
+                        <th class="text-end">Total gastado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($clientesFrecuentes as $cliente)
+                    <tr>
+                        <td data-label="Pos.">
+                            @if($loop->iteration == 1)
+                                <span style="font-size:1.3rem;">🥇</span>
+                            @elseif($loop->iteration == 2)
+                                <span style="font-size:1.3rem;">🥈</span>
+                            @elseif($loop->iteration == 3)
+                                <span style="font-size:1.3rem;">🥉</span>
+                            @else
+                                <span class="hora-badge">{{ $loop->iteration }}</span>
+                            @endif
+                        </td>
+                        <td data-label="Cliente">
+                            <span style="font-weight:600;color:#3E2723;">{{ $cliente['nombre'] }}</span>
+                        </td>
+                        <td data-label="Compras" class="text-center">
+                            <span class="mesa-badge">{{ $cliente['num_compras'] }} {{ $cliente['num_compras'] == 1 ? 'vez' : 'veces' }}</span>
+                        </td>
+                        <td data-label="Total" class="text-end">
+                            <span class="total-badge">${{ number_format($cliente['total_gastado'], 2) }}</span>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        <p class="text-muted mt-2" style="font-size:0.8rem;text-align:right;">
+            <i class="fas fa-info-circle me-1"></i>
+            Datos del mes actual · Generados por el modelo ML
+        </p>
+    </div>
+</div>
+@endif
+
+{{-- ===== PREDICCIÓN PRÓXIMA SEMANA ===== --}}
+@if($prediccionSemana && (count($prediccionSemana['mas_vendidos'] ?? []) > 0 || count($prediccionSemana['menos_vendidos'] ?? []) > 0))
+<div class="ml-section mt-4">
+    <h5 class="detalle-titulo">
+        <i class="fas fa-chart-line me-2" style="color:#8B4513;"></i>
+        Predicción de Ventas — Próxima Semana
+        <small class="ms-2" style="font-size:0.75rem;color:#a0856b;font-weight:400;">Basado en promedio del último mes · Spark ML</small>
+    </h5>
+    <div class="row g-4">
+
+        {{-- Más vendidos --}}
+        <div class="col-lg-6">
+            <div class="grafico-card h-100">
+                <h6 class="grafico-titulo mb-3">
+                    <span style="font-size:1.1rem;">🚀</span>
+                    <span class="ms-2" style="color:#155724;">Top 5 — Se venderán más</span>
+                </h6>
+                <div class="table-responsive">
+                    <table class="table detalle-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Producto</th>
+                                <th class="text-center">Prom. semanal</th>
+                                <th class="text-end">Predicción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($prediccionSemana['mas_vendidos'] as $i => $p)
+                            <tr>
+                                <td><span class="hora-badge">{{ $i + 1 }}</span></td>
+                                <td><span style="font-weight:600;color:#3E2723;">{{ $p['nombre'] }}</span></td>
+                                <td class="text-center">
+                                    <span class="mesa-badge">{{ $p['promedio_semanal'] ?? '—' }} u/sem</span>
+                                </td>
+                                <td class="text-end">
+                                    <span style="font-weight:700;color:#155724;">≈ {{ $p['prediccion'] }} u</span>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {{-- Menos vendidos --}}
+        <div class="col-lg-6">
+            <div class="grafico-card h-100">
+                <h6 class="grafico-titulo mb-3">
+                    <span style="font-size:1.1rem;">📉</span>
+                    <span class="ms-2" style="color:#856404;">Bottom 5 — Se venderán menos</span>
+                </h6>
+                <div class="table-responsive">
+                    <table class="table detalle-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Producto</th>
+                                <th class="text-center">Prom. semanal</th>
+                                <th class="text-end">Predicción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($prediccionSemana['menos_vendidos'] as $i => $p)
+                            <tr>
+                                <td><span class="hora-badge">{{ $i + 1 }}</span></td>
+                                <td><span style="font-weight:600;color:#3E2723;">{{ $p['nombre'] }}</span></td>
+                                <td class="text-center">
+                                    <span class="mesa-badge">{{ $p['promedio_semanal'] ?? '—' }} u/sem</span>
+                                </td>
+                                <td class="text-end">
+                                    <span style="font-weight:700;color:#856404;">≈ {{ $p['prediccion'] }} u</span>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <p class="text-muted mt-2" style="font-size:0.8rem;text-align:right;">
+        <i class="fas fa-info-circle me-1"></i>
+        Predicción basada en el promedio de ventas semanales del último mes + tendencia del 5%
+    </p>
+</div>
+@endif
+
 </div>
 
 <!-- Scripts para Chart.js (igual que antes) -->
@@ -191,7 +434,101 @@
             }
         });
         @endif
+
+        @if(count($productosMes) > 0)
+        const ctxMes = document.getElementById('graficaProductosMes').getContext('2d');
+        const nombresMes   = {!! json_encode(array_column($productosMes, 'nombre')) !!};
+        const cantidadesMes = {!! json_encode(array_column($productosMes, 'cantidad')) !!};
+
+        new Chart(ctxMes, {
+            type: 'doughnut',
+            data: {
+                labels: nombresMes,
+                datasets: [{
+                    data: cantidadesMes,
+                    backgroundColor: [
+                        '#8B4513',
+                        '#D2691E',
+                        '#D4AF37',
+                        '#A0522D',
+                        '#5D4037',
+                        '#C0874F',
+                        '#E8A87C',
+                        '#6D3B1F',
+                        '#B8860B',
+                        '#8B6914'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            font: { size: 12 }
+                        }
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+        @endif
     });
+
+    // ML Predicción
+document.getElementById('btn-predecir')?.addEventListener('click', function () {
+    const cantidad = document.getElementById('ml-cantidad').value;
+    const precio   = document.getElementById('ml-precio').value;
+
+    document.getElementById('ml-resultado').style.display = 'none';
+    document.getElementById('ml-loading').style.display   = 'block';
+
+    fetch('{{ route("ventas.predecir") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({ cantidad: parseFloat(cantidad), precio: parseFloat(precio) })
+    })
+    .then(r => r.json())
+    .then(res => {
+        document.getElementById('ml-loading').style.display = 'none';
+        const box = document.getElementById('ml-resultado');
+        box.style.display = 'block';
+
+        if (res.success) {
+            const alta = res.data.prediccion === 'alta';
+            document.getElementById('ml-resultado-inner').style.background = alta ? '#d4edda' : '#fff3cd';
+            document.getElementById('ml-icono').innerHTML  = alta ? '🚀' : '📉';
+            document.getElementById('ml-texto').innerHTML  = alta ? 'VENTA ALTA' : 'VENTA BAJA';
+            document.getElementById('ml-texto').style.color = alta ? '#155724' : '#856404';
+            document.getElementById('ml-detalle').innerHTML =
+                `Ingreso estimado: <strong>$${res.data.ingreso}</strong> &nbsp;|&nbsp; Confianza: <strong>$${(res.data.confianza * 100).toFixed(1)}%</strong>`;
+        } else {
+            document.getElementById('ml-resultado-inner').style.background = '#f8d7da';
+            document.getElementById('ml-icono').innerHTML = '⚠️';
+            document.getElementById('ml-texto').innerHTML = 'Error al predecir';
+            document.getElementById('ml-texto').style.color = '#721c24';
+            document.getElementById('ml-detalle').innerHTML = res.error ?? 'Error desconocido';
+        }
+    })
+    .catch(err => {
+        document.getElementById('ml-loading').style.display = 'none';
+        const box = document.getElementById('ml-resultado');
+        box.style.display = 'block';
+        document.getElementById('ml-resultado-inner').style.background = '#f8d7da';
+        document.getElementById('ml-icono').innerHTML = '⚠️';
+        document.getElementById('ml-texto').innerHTML = 'Error de conexión';
+        document.getElementById('ml-texto').style.color = '#721c24';
+        document.getElementById('ml-detalle').innerHTML = 'No se pudo conectar. Verifica que la API Python esté corriendo.';
+    });
+});
 </script>
 
 <style>

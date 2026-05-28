@@ -1,1 +1,1 @@
-[{"nombre": "Sofia", "num_compras": 4, "total_gastado": 900.0, "frecuencia": "Varias veces/semana"}, {"nombre": "Alan Ronaldo", "num_compras": 4, "total_gastado": 1764.0, "frecuencia": "Varias veces/semana"}, {"nombre": "Cliente1", "num_compras": 4, "total_gastado": 257.0, "frecuencia": "Varias veces/semana"}, {"nombre": "clase_profe_Hector", "num_compras": 1, "total_gastado": 64.0, "frecuencia": "Ocasional"}]
+[{"posicion": 1, "nombre": "Alan Ronaldo", "num_compras": 4, "total_gastado": 3321.0}]

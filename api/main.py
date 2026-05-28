@@ -2,7 +2,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
 from bson import ObjectId
+from pyspark.ml.classification import DecisionTreeClassificationModel
+from pyspark.sql import SparkSession
+from pyspark.ml.feature import VectorAssembler
+import json as json_lib
 import config
+import os
 
 # Crear la aplicación FastAPI
 app = FastAPI(
@@ -446,3 +451,116 @@ def health_check():
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Database connection failed: {str(e)}")
+
+def _get_spark():
+    return SparkSession.builder \
+        .appName("CoffeSoftML-Predict") \
+        .config("spark.jars.packages", "org.mongodb.spark:mongo-spark-connector_2.12:10.3.0") \
+        .getOrCreate()
+
+@app.get("/ml/estadisticas")
+def get_ml_estadisticas():
+    """Retorna métricas del modelo entrenado"""
+    try:
+        meta_path = os.path.join(os.path.dirname(__file__), "modelo_meta.json")
+        if not os.path.exists(meta_path):
+            raise HTTPException(status_code=404, detail="Modelo no entrenado aún. Ejecuta ml_trainer.py")
+        with open(meta_path, "r") as f:
+            meta = json_lib.load(f)
+        return {"success": True, "data": meta}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/ml/clientes-frecuentes")
+def get_clientes_frecuentes():
+    """Retorna el ranking de clientes frecuentes del mes generado por el trainer"""
+    try:
+        path = os.path.join(os.path.dirname(__file__), "clientes_frecuentes.json")
+        if not os.path.exists(path):
+            raise HTTPException(status_code=404, detail="Datos no disponibles. Ejecuta ml_trainer.py")
+        with open(path, "r", encoding="utf-8") as f:
+            data = json_lib.load(f)
+        return {"success": True, "data": data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/ml/productos-mes")
+def get_productos_mes():
+    """Retorna el top 10 productos del mes generado por el trainer"""
+    try:
+        path = os.path.join(os.path.dirname(__file__), "productos_mes.json")
+        if not os.path.exists(path):
+            raise HTTPException(status_code=404, detail="Datos no disponibles. Ejecuta ml_trainer.py")
+        with open(path, "r", encoding="utf-8") as f:
+            data = json_lib.load(f)
+        return {"success": True, "data": data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/ml/prediccion-semana")
+def get_prediccion_semana():
+    """Retorna predicción de productos más y menos vendidos para la próxima semana"""
+    try:
+        path = os.path.join(os.path.dirname(__file__), "prediccion_productos.json")
+        if not os.path.exists(path):
+            raise HTTPException(status_code=404, detail="Datos no disponibles. Ejecuta ml_trainer.py")
+        with open(path, "r", encoding="utf-8") as f:
+            data = json_lib.load(f)
+        return {"success": True, "data": data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/ml/predecir")
+def predecir_venta(data: dict):
+    """
+    Recibe: { "cantidad": 3, "precio": 90 }
+    Retorna: { "prediccion": "alta"/"baja", "ingreso": 270, "confianza": 0.87 }
+    """
+    try:
+        cantidad = float(data.get("cantidad", 0))
+        precio = float(data.get("precio", 0))
+
+        if cantidad <= 0 or precio <= 0:
+            raise HTTPException(status_code=400, detail="Cantidad y precio deben ser mayores a 0")
+
+        model_path = os.path.join(os.path.dirname(__file__), "modelo_ventas")
+        if not os.path.exists(model_path):
+            raise HTTPException(status_code=404, detail="Modelo no entrenado aún. Ejecuta ml_trainer.py")
+
+        ingreso = cantidad * precio
+
+        spark = _get_spark()
+        spark.sparkContext.setLogLevel("ERROR")
+
+        model = DecisionTreeClassificationModel.load(model_path)
+
+        df = spark.createDataFrame([(cantidad, precio, ingreso)], ["cantidad", "precio", "ingreso"])
+        assembler = VectorAssembler(inputCols=["cantidad", "precio", "ingreso"], outputCol="features", handleInvalid="skip")
+        df = assembler.transform(df)
+
+        result = model.transform(df).select("prediction", "probability").collect()[0]
+        prediccion = "alta" if result["prediction"] == 1.0 else "baja"
+        probabilidades = result["probability"].toArray().tolist()
+        confianza = round(max(probabilidades), 4)
+
+        return {
+            "success": True,
+            "data": {
+                "prediccion": prediccion,
+                "ingreso": round(ingreso, 2),
+                "confianza": confianza
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

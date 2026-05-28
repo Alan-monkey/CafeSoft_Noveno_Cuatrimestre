@@ -120,40 +120,7 @@
                         <!-- Formulario de pago -->
                         <form action="{{ route('carrito.procesar-pago') }}" method="POST" id="pagoForm">
                             @csrf
-                            @if($user && $user->user_tipo == 1 && ($user->puntos ?? 0) > 0)
-<div class="form-group-modern">
-    <div class="puntos-container" style="background: linear-gradient(145deg, #fff8e1, #fff3cd); border-radius: 20px; padding: 20px; margin-bottom: 25px; border: 2px solid #ffc107;">
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-            <i class="fas fa-star" style="color: #ffc107; font-size: 1.5rem;"></i>
-            <div>
-                <h5 style="margin: 0; color: #5D4037; font-weight: 700;">Usar Puntos</h5>
-                <small style="color: #8B6B4F;">Tienes <strong>{{ $user->puntos }}</strong> puntos disponibles (1 punto = $1 de descuento)</small>
-            </div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <span style="font-size: 1.2rem; font-weight: 600; color: #8B4513;">⭐</span>
-            <input type="number"
-                   name="puntos_a_usar"
-                   id="puntosAUsar"
-                   min="0"
-                   max="{{ min($user->puntos, $total) }}"
-                   value="0"
-                   style="flex: 1; padding: 12px 15px; border: 2px solid #ffc107; border-radius: 12px; font-size: 1.1rem; font-weight: 600; text-align: center;"
-                   oninput="actualizarTotalConPuntos(this.value)">
-            <button type="button"
-                    onclick="document.getElementById('puntosAUsar').value = {{ min($user->puntos, $total) }}; actualizarTotalConPuntos({{ min($user->puntos, $total) }});"
-                    style="padding: 12px 18px; background: #ffc107; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; color: #212529;">
-                Usar todos
-            </button>
-        </div>
-        <div id="descuentoPuntos" style="margin-top: 10px; color: #28a745; font-weight: 600; display: none;">
-            <i class="fas fa-tag"></i> Descuento aplicado: $<span id="montoDescuento">0.00</span>
-            — Nuevo total: $<span id="nuevoTotal">{{ number_format($total, 2) }}</span>
-        </div>
-    </div>
-</div>
-@endif
-
+                            
                             <div class="form-group-modern">
                                 <label class="form-label-modern">
                                     <i class="fas fa-money-bill-wave"></i> Efectivo Recibido
@@ -177,71 +144,52 @@
                             <!-- Campo oculto para la mesa -->
                             <input type="hidden" name="mesa" id="mesaInput" value="">
 
-                            {{-- Sección de puntos (solo clientes tipo 1) --}}
-                            @if($user && $user->user_tipo == 1)
-                            <div class="puntos-container mb-4">
-                                <div class="puntos-header">
-                                    <i class="fas fa-star"></i>
-                                    <h5>Usar Puntos</h5>
-                                    <span class="puntos-disponibles">
-                                        Disponibles: <strong>{{ $user->puntos ?? 0 }}</strong> pts
-                                    </span>
+                            <!-- Calculadora moderna -->
+                            <div class="calculadora-card">
+                                <div class="calculadora-header">
+                                    <i class="fas fa-calculator"></i>
+                                    <h5>Calculadora de Pago</h5>
                                 </div>
-                                <div class="puntos-input-group">
-                                    <input type="number"
-                                           name="puntos_a_usar"
-                                           id="puntosAUsar"
-                                           min="0"
-                                           max="{{ $user->puntos ?? 0 }}"
-                                           step="1"
-                                           value="0"
-                                           class="input-puntos"
-                                           oninput="calcularDescuento()">
-                                    <span class="puntos-label">pts</span>
-                                </div>
-                                <div id="descuentoInfo" class="descuento-info" style="display:none;">
-                                    <i class="fas fa-tag"></i>
-                                    Descuento: $<span id="descuentoMonto">0.00</span>
-                                    &nbsp;→&nbsp; Nuevo total: $<span id="nuevoTotal">0.00</span>
+                                
+                                <div class="calculadora-body">
+                                    <!-- Billetes -->
+                                    <div class="billetes-grid">
+                                        @foreach([20, 50, 100, 200, 500, 1000] as $billete)
+                                        <button type="button" class="billete-btn" data-value="{{ $billete }}">
+                                            ${{ $billete }}
+                                        </button>
+                                        @endforeach
+                                    </div>
+                                    
+                                    <!-- Teclado numérico -->
+                                    <div class="teclado-grid">
+                                        @for($i = 1; $i <= 9; $i++)
+                                        <button type="button" class="numero-btn" data-value="{{ $i }}">
+                                            {{ $i }}
+                                        </button>
+                                        @endfor
+                                        <button type="button" class="numero-btn decimal-btn" onclick="agregarDecimal()">
+                                            .
+                                        </button>
+                                        <button type="button" class="numero-btn" data-value="0">
+                                            0
+                                        </button>
+                                        <button type="button" class="limpiar-btn" onclick="limpiarCalculadora()">
+                                            C
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Botones de acción rápida -->
+                                    <div class="acciones-rapidas">
+                                        <button type="button" class="accion-btn calcular" onclick="calcularVuelto()">
+                                            <i class="fas fa-calculator"></i> Calcular Vuelto
+                                        </button>
+                                        <button type="button" class="accion-btn insertar" onclick="insertarTotal()">
+                                            <i class="fas fa-dollar-sign"></i> Insertar Total
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                            @else
-                            <input type="hidden" name="puntos_a_usar" value="0">
-                            @endif
-
-                            <!-- Calculadora moderna -->
-                                                         {{-- Sección de puntos (solo para clientes tipo 1) --}}
-                            @if($user && $user->user_tipo == 1)
-                            <div class="puntos-container mb-4" style="background: linear-gradient(145deg, #f8f4f0, #f0e8e0); border-radius: 20px; padding: 20px; border: 1px solid #e8d5c0;">
-                                <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px; padding-bottom:10px; border-bottom:2px solid #e8d5c0;">
-                                    <i class="fas fa-star" style="color:#D4AF37; font-size:1.5rem;"></i>
-                                    <h5 style="margin:0; color:#5D4037; font-weight:700;">Usar Puntos</h5>
-                                    <span style="margin-left:auto; background:rgba(212,175,55,0.15); color:#8B6914; padding:5px 12px; border-radius:20px; font-size:0.9rem;">
-                                        Disponibles: <strong>{{ $user->puntos ?? 0 }}</strong> pts
-                                    </span>
-                                </div>
-                                <div style="display:flex; align-items:center; gap:10px;">
-                                    <input type="number"
-                                           name="puntos_a_usar"
-                                           id="puntosAUsar"
-                                           min="0"
-                                           max="{{ $user->puntos ?? 0 }}"
-                                           step="1"
-                                           value="0"
-                                           style="flex:1; padding:12px 15px; border:2px solid #e8d5c0; border-radius:12px; font-size:1.1rem; font-weight:600; color:#5D4037;"
-                                           oninput="calcularDescuento()">
-                                    <span style="color:#8B4513; font-weight:600;">pts</span>
-                                </div>
-                                <div id="descuentoInfo" style="margin-top:10px; color:#28a745; font-weight:600; display:none;">
-                                    <i class="fas fa-tag"></i> Descuento: $<span id="descuentoMonto">0.00</span>
-                                    &nbsp;→&nbsp; Nuevo total: $<span id="nuevoTotal">0.00</span>
-                                </div>
-                            </div>
-                            @endif
-
-                            <!-- Calculadora moderna -->
-
-                            
 
                             <!-- Botones de acción -->
                             <div class="acciones-pago">
@@ -1687,7 +1635,6 @@ function actualizarEfectivo(valor) {
         input.classList.remove('text-success');
         input.classList.add('text-danger');
     }
-    
 }
 
 function actualizarModal() {
@@ -1698,40 +1645,5 @@ function actualizarModal() {
     document.getElementById('modalEfectivo').textContent = efectivo.toFixed(2);
     document.getElementById('modalCambio').textContent = cambio.toFixed(2);
 }
-
-function actualizarTotalConPuntos(puntos) {
-    const total = {{ $total }};
-    const descuento = Math.min(parseFloat(puntos) || 0, total);
-    const nuevoTotal = total - descuento;
-
-    if (descuento > 0) {
-        document.getElementById('descuentoPuntos').style.display = 'block';
-        document.getElementById('montoDescuento').textContent = descuento.toFixed(2);
-        document.getElementById('nuevoTotal').textContent = nuevoTotal.toFixed(2);
-    } else {
-        document.getElementById('descuentoPuntos').style.display = 'none';
-    }
-}
-
-function calcularDescuento() {
-    const puntos = parseFloat(document.getElementById('puntosAUsar').value) || 0;
-    const totalOriginal = {{ $total }};
-    const descuento = Math.min(puntos, totalOriginal);
-    const nuevoTotal = totalOriginal - descuento;
-
-    const info = document.getElementById('descuentoInfo');
-    if (puntos > 0) {
-        document.getElementById('descuentoMonto').textContent = descuento.toFixed(2);
-        document.getElementById('nuevoTotal').textContent = nuevoTotal.toFixed(2);
-        info.style.display = 'block';
-    } else {
-        info.style.display = 'none';
-    }
-
-    // Actualizar el total en el modal si existe
-    const modalTotal = document.getElementById('modalTotal');
-    if (modalTotal) modalTotal.textContent = nuevoTotal.toFixed(2);
-}
-
 </script>
 @endsection
