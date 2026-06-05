@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CarritoController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\InsumosController;
+
 
 Route::get('/', function () {
     return view('auth.login');
@@ -64,8 +66,6 @@ Route::middleware(['auth:usuarios', 'check.user.type:0'])->group(function () {
     Route::put('/productos/{producto}', [ProductosController::class, 'update'])->name('productos.update');
     Route::get('/productos/eliminar', [ProductosController::class, 'eliminar'])->name('productos.eliminar');
     Route::post('/productos/destroy', [ProductosController::class, 'destroy'])->name('productos.destroy');
-    Route::get('/inventario', [ProductosController::class, 'inventario'])->name('inventario.index');
-    Route::post('/inventario/actualizar', [ProductosController::class, 'actualizarStock'])->name('inventario.actualizar');
     
     // Rutas para backups (solo empleados)
     Route::get('/backups', [BackupController::class, 'index'])->name('backups.index');
@@ -94,4 +94,17 @@ Route::middleware(['auth:usuarios', 'check.user.type:0'])->group(function () {
     // Rutas de registro (solo empleados)
     Route::get('/libros/registrarse', [RegistrarseController::class, 'registrarse'])->name('libros.registrarse');
     Route::post('/libros/registrarse', [RegistrarseController::class, 'registrar'])->name('libros.registrar');
+
+
+    // Rutas para insumos
+    // Insumos
+// Insumos / Inventario
+    Route::get('/inventario/crear',       [InsumosController::class, 'create'])->name('insumos.create');
+    Route::post('/inventario',            [InsumosController::class, 'store'])->name('insumos.store');
+    Route::get('/inventario',             [InsumosController::class, 'index'])->name('inventario.index');
+    Route::get('/inventario/{id}/editar', [InsumosController::class, 'edit'])->name('insumos.edit');
+    Route::put('/inventario/{id}',        [InsumosController::class, 'update'])->name('insumos.update');
+    Route::delete('/inventario/{id}',     [InsumosController::class, 'destroy'])->name('insumos.destroy');
+
+
 });
