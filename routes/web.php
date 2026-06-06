@@ -66,7 +66,8 @@ Route::middleware(['auth:usuarios', 'check.user.type:0'])->group(function () {
     Route::put('/productos/{producto}', [ProductosController::class, 'update'])->name('productos.update');
     Route::get('/productos/eliminar', [ProductosController::class, 'eliminar'])->name('productos.eliminar');
     Route::post('/productos/destroy', [ProductosController::class, 'destroy'])->name('productos.destroy');
-    
+    Route::get('/productos/{id}/editar', [ProductosController::class, 'editarVista'])->name('productos.editar');
+
     // Rutas para backups (solo empleados)
     Route::get('/backups', [BackupController::class, 'index'])->name('backups.index');
     Route::get('/backups/create', [BackupController::class, 'createBackupForm'])->name('backups.create');

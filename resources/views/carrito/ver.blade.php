@@ -110,8 +110,8 @@
                                         @endphp
 
                                         
-                                        @if($stock > 0)
                                             <div class="producto-card-sugerido">
+
                                                 <div class="producto-imagen-sugerido">
                                                     @if($producto->imagen)
                                                         <img src="{{ asset('storage/' . $producto->imagen) }}" alt="{{ $producto->nombre }}">
@@ -120,9 +120,7 @@
                                                             <i class="fas fa-coffee"></i>
                                                         </div>
                                                     @endif
-                                                    @if($stock < 10)
-                                                        <span class="badge-stock-bajo">¡Últimos {{ $stock }}!</span>
-                                                    @endif
+
                                                 </div>
                                                 <div class="producto-info-sugerido">
                                                     <h5>{{ $producto->nombre }}</h5>
@@ -138,7 +136,7 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                        @endif
+                                        
                                     @endforeach
                                 </div>
                             </div>
@@ -284,8 +282,9 @@
                                         @endphp
 
                                         
-                                        @if(!$enCarrito && $stock > 0)
-                                            <div class="producto-mini-card">
+                                            @if(!$enCarrito)
+                                                <div class="producto-mini-card">
+
                                                 <div class="producto-mini-imagen">
                                                     @if($producto->imagen)
                                                         <img src="{{ asset('storage/' . $producto->imagen) }}" alt="{{ $producto->nombre }}">

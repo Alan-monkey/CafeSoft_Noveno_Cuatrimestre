@@ -404,9 +404,8 @@ def update_producto(producto_id: str, producto: dict):
             {"_id": ObjectId(producto_id)},
             {"$set": producto}
         )
-        
-        if result.modified_count == 0:
-            raise HTTPException(status_code=400, detail="No se pudo actualizar el producto")
+# modified_count puede ser 0 si los datos son idénticos, igual es éxito
+
         
         # Obtener el producto actualizado
         producto_actualizado = config.productos_collection.find_one({"_id": ObjectId(producto_id)})

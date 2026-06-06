@@ -19,95 +19,90 @@
             <div class="col-md-8 col-lg-6">
                 <div class="producto-card">
                     <div class="producto-card-header">
-                        <div class="header-icon"><i class="fas fa-plus-circle"></i></div>
+                        <div class="header-icon"><i class="fas fa-edit"></i></div>
                         <div class="header-title">
-                            <h4><i class="fas fa-coffee"></i> Añadir producto</h4>
-                            <p>Nueva delicia para tu cafetería</p>
+                            <h4><i class="fas fa-coffee"></i> Editar producto</h4>
+                            <p>Actualiza la información del producto</p>
                         </div>
                         <div class="coffee-decoration-header">
-                            <span>☕</span><span>✨</span><span>☕</span>
+                            <span>☕</span><span>✏️</span><span>☕</span>
                         </div>
                     </div>
 
                     <div class="producto-card-body">
-                        <form method="POST" action="{{ route('productos.store') }}" enctype="multipart/form-data">
+                        <form method="POST" action="{{ route('productos.update', $producto->_id) }}" enctype="multipart/form-data">
                             @csrf
+                            @method('PUT')
 
-                            <!-- Campo Insumos -->
-                            <div class="form-group-modern">
-                                <label class="form-label-modern">
-                                    <i class="fas fa-boxes"></i> Insumos requeridos
-                                </label>
-                                <div class="insumos-selector-wrapper">
-                                    <div class="insumos-search-box" id="insumosSearchBox" onclick="toggleInsumosList()">
-                                        <span id="insumosPlaceholder">Selecciona los insumos necesarios...</span>
-                                        <i class="fas fa-chevron-down" id="insumosChevron"></i>
-                                    </div>
-                                    <div class="insumos-dropdown" id="insumosDropdown">
-                                        <input type="text" class="insumos-filter" id="insumosFilter"
-                                            placeholder="Buscar insumo..." oninput="filtrarInsumos()">
-                                        <div class="insumos-list" id="insumosList">
-                                            @foreach($insumos as $insumo)
-                                            <div class="insumo-item" onclick="toggleInsumo('{{ $insumo->_id }}', '{{ addslashes($insumo->nombre) }}', '{{ $insumo->tipo ?? 'piezas' }}')">
-                                                <input type="checkbox" class="insumo-checkbox"
-                                                    id="insumo_{{ $insumo->_id }}" value="{{ $insumo->_id }}">
-                                                <label for="insumo_{{ $insumo->_id }}" class="insumo-label">
-                                                    <span class="insumo-nombre">{{ $insumo->nombre }}</span>
-                                                    <span class="insumo-tipo">{{ $insumo->tipo ?? '' }}</span>
-                                                </label>
-                                            </div>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                </div>
-                                <div id="insumosHidden"></div>
-                                <div class="insumos-cantidades" id="insumosCantidades"></div>
-                                <input type="text" id="insumosValidator" style="opacity:0;height:0;padding:0;border:0;position:absolute;" required tabindex="-1">
-                                <small class="form-text-modern">
-                                    <i class="fas fa-info-circle"></i> Obligatorio — selecciona al menos un insumo e indica la cantidad
-                                </small>
+                    <!-- Campo Insumos -->
+                    <div class="form-group-modern">
+                        <label class="form-label-modern">
+                            <i class="fas fa-boxes"></i> Insumos requeridos
+                        </label>
+                        <div class="insumos-selector-wrapper">
+                            <div class="insumos-search-box" id="insumosSearchBox" onclick="toggleInsumosList()">
+                                <span id="insumosPlaceholder">Selecciona los insumos necesarios...</span>
+                                <i class="fas fa-chevron-down" id="insumosChevron"></i>
                             </div>
-
-                            <!-- Campo Nombre -->
+                            <div class="insumos-dropdown" id="insumosDropdown">
+                                <input type="text" class="insumos-filter" id="insumosFilter"
+                                    placeholder="Buscar insumo..." oninput="filtrarInsumos()">
+                                <div class="insumos-list" id="insumosList">
+                                    @foreach($insumos as $insumo)
+                                    <div class="insumo-item" onclick="toggleInsumo('{{ $insumo->_id }}', '{{ addslashes($insumo->nombre) }}', '{{ $insumo->tipo ?? 'piezas' }}')">
+                                        <input type="checkbox" class="insumo-checkbox"
+                                            id="insumo_{{ $insumo->_id }}" value="{{ $insumo->_id }}">
+                                        <label for="insumo_{{ $insumo->_id }}" class="insumo-label">
+                                            <span class="insumo-nombre">{{ $insumo->nombre }}</span>
+                                            <span class="insumo-tipo">{{ $insumo->tipo ?? '' }}</span>
+                                        </label>
+                                    </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                        <div id="insumosHidden"></div>
+                        <div class="insumos-cantidades" id="insumosCantidades"></div>
+                        <small class="form-text-modern">
+                            <i class="fas fa-info-circle"></i> Selecciona los insumos e indica la cantidad de cada uno
+                        </small>
+                    </div>
                             <div class="form-group-modern">
                                 <label class="form-label-modern">
                                     <i class="fas fa-cookie-bite"></i> Nombre del producto
                                 </label>
                                 <div class="input-wrapper-modern">
                                     <input type="text" name="nombre" class="form-control-modern"
-                                           placeholder="Ej: Cappuccino Caramelo" required>
+                                        value="{{ $producto->nombre }}" required>
                                     <span class="focus-border"></span>
                                 </div>
                             </div>
 
-                            <!-- Campo Precio -->
+
                             <div class="form-group-modern">
                                 <label class="form-label-modern">
                                     <i class="fas fa-tag"></i> Precio
                                 </label>
                                 <div class="input-wrapper-modern">
                                     <input type="number" step="0.01" name="precio" class="form-control-modern"
-                                           placeholder="$0.00" required>
+                                           value="{{ $producto->precio }}" required>
                                     <span class="focus-border"></span>
                                 </div>
                             </div>
 
-                            <!-- Campo Descripción -->
                             <div class="form-group-modern">
                                 <label class="form-label-modern">
                                     <i class="fas fa-pencil-alt"></i> Descripción
                                 </label>
                                 <div class="input-wrapper-modern">
-                                    <textarea name="descripcion" class="form-control-modern"
-                                              placeholder="Describe este delicioso producto..." required rows="4"></textarea>
+                                    <textarea name="descripcion" class="form-control-modern" rows="4" required>{{ $producto->descripcion }}</textarea>
                                     <span class="focus-border"></span>
                                 </div>
                             </div>
 
-                            <!-- Campo Imagen -->
                             <div class="form-group-modern">
                                 <label class="form-label-modern">
-                                    <i class="fas fa-image"></i> Imagen (opcional)
+                                    <i class="fas fa-image"></i> Nueva imagen (opcional)
                                 </label>
                                 <div class="file-input-wrapper-modern">
                                     <input type="file" name="imagen" accept="image/*" id="fileInput">
@@ -116,6 +111,13 @@
                                         <span>Seleccionar imagen</span>
                                     </div>
                                 </div>
+                                @if($producto->imagen)
+                                <div style="margin-top:10px">
+                                    <img src="{{ asset('storage/' . $producto->imagen) }}"
+                                         style="width:80px;height:80px;object-fit:cover;border-radius:12px;border:2px solid #e8d5c0">
+                                    <small class="form-text-modern" style="margin-left:8px">Imagen actual</small>
+                                </div>
+                                @endif
                             </div>
 
                             <div class="d-flex gap-3">
@@ -123,7 +125,7 @@
                                     <i class="fas fa-arrow-left"></i> Cancelar
                                 </a>
                                 <button type="submit" class="btn-submit-modern" style="flex:1">
-                                    <i class="fas fa-save"></i> Guardar producto
+                                    <i class="fas fa-save"></i> Guardar cambios
                                     <span class="btn-overlay"></span>
                                 </button>
                             </div>
@@ -161,7 +163,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const fileButton = document.getElementById('fileButton').querySelector('span');
     if (fileInput) {
         fileInput.addEventListener('change', function(e) {
-            fileButton.textContent = e.target.files[0] ? e.target.files[0].name : 'Seleccionar imagen';
+            const fileName = e.target.files[0] ? e.target.files[0].name : 'Seleccionar imagen (opcional)';
+            fileButton.textContent = fileName;
         });
     }
 
@@ -171,8 +174,33 @@ document.addEventListener('DOMContentLoaded', function() {
             closeInsumosList();
         }
     });
+
+    // Pre-cargar insumos existentes del producto
+    const insumosActuales = @json($producto->insumos ?? []);
+    const cantidadesActuales = @json($producto->insumos_cantidad ?? []);
+
+    insumosActuales.forEach(id => {
+        const checkbox = document.getElementById('insumo_' + id);
+        if (!checkbox) return;
+
+        const item = checkbox.closest('.insumo-item');
+        const nombre = item.querySelector('.insumo-nombre').textContent.trim();
+        const tipo = item.querySelector('.insumo-tipo').textContent.trim() || 'piezas';
+        const cantidad = cantidadesActuales[id] ?? '';
+
+        insumosSeleccionados[id] = { nombre, tipo, cantidad };
+        checkbox.checked = true;
+        item.classList.add('selected');
+    });
+
+    renderCantidades();
+    renderHiddenInputs();
+    updatePlaceholder();
 });
 
+
+
+// { id: { nombre, tipo, cantidad } }
 const insumosSeleccionados = {};
 
 function toggleInsumosList() {
@@ -229,11 +257,11 @@ function renderCantidades() {
                 <span class="insumo-cantidad-tipo">${data.tipo}</span>
             </div>
             <div class="insumo-cantidad-input-wrap">
-                <input type="number"
+                <input type="number" 
                     class="insumo-cantidad-input"
                     placeholder="0"
-                    min="0.1"
-                    step="${step}"
+                    min="0.001"
+                    step="any"
                     value="${data.cantidad}"
                     oninput="setCantidad('${id}', this.value)"
                     required>
@@ -245,12 +273,16 @@ function renderCantidades() {
         `;
         container.appendChild(row);
     });
-
-    updateValidator();
 }
 
 function getUnidad(tipo) {
-    const tipos = { 'gramos':'g','litros':'L','piezas':'pz','kilogramos':'kg','mililitros':'ml' };
+    const tipos = {
+        'gramos': 'g',
+        'litros': 'L',
+        'piezas': 'pz',
+        'kilogramos': 'kg',
+        'mililitros': 'ml',
+    };
     return tipos[tipo?.toLowerCase()] ?? tipo ?? 'u';
 }
 
@@ -303,11 +335,6 @@ function updatePlaceholder() {
     }
 }
 
-function updateValidator() {
-    const validator = document.getElementById('insumosValidator');
-    if (validator) validator.value = Object.keys(insumosSeleccionados).length > 0 ? 'ok' : '';
-}
-
 function filtrarInsumos() {
     const filtro = document.getElementById('insumosFilter').value.toLowerCase();
     document.querySelectorAll('.insumo-item').forEach(item => {
@@ -316,6 +343,7 @@ function filtrarInsumos() {
     });
 }
 </script>
+
 
 <style>
     .producto-create-container { position:relative;min-height:100vh;background:linear-gradient(145deg,#faf0e6 0%,#f5e6d3 100%);font-family:'Poppins','Segoe UI',sans-serif;padding:20px 0;overflow-x:hidden; }
@@ -374,41 +402,103 @@ function filtrarInsumos() {
     .d-flex { display:flex; }
     .gap-3 { gap:1rem; }
 
-    .alert-modern { padding:18px 20px;border-radius:15px;display:flex;align-items:center;gap:12px; }
+    .alert-modern { padding:18px 20px;border-radius:15px;display:flex;align-items:center;gap:12px;animation:slideIn .5s ease; }
     .alert-success-modern { background:linear-gradient(145deg,#d4edda,#c3e6cb);border-left:6px solid #28a745;color:#155724; }
+    @keyframes slideIn{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+    /* ===== CANTIDADES DE INSUMOS ===== */
+.insumos-cantidades {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
 
-    /* Selector de insumos */
-    .insumos-selector-wrapper { position:relative; }
-    .insumos-search-box { display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border:2px solid #e8d5c0;border-radius:15px;background:white;cursor:pointer;color:#3E2723;transition:all .3s ease;user-select:none; }
-    .insumos-search-box:hover,.insumos-search-box.open { border-color:#8B4513;box-shadow:0 0 0 4px rgba(139,69,19,.1); }
-    #insumosPlaceholder { color:#B2967D;font-size:1rem; }
-    #insumosPlaceholder.has-selection { color:#3E2723; }
-    #insumosChevron { transition:transform .3s ease;color:#8B4513; }
-    #insumosChevron.rotated { transform:rotate(180deg); }
-    .insumos-dropdown { display:none;position:absolute;top:calc(100% + 8px);left:0;right:0;background:white;border:2px solid #8B4513;border-radius:15px;z-index:100;box-shadow:0 10px 30px rgba(139,69,19,.2);overflow:hidden; }
-    .insumos-dropdown.open { display:block; }
-    .insumos-filter { width:100%;padding:12px 18px;border:none;border-bottom:1px solid #e8d5c0;font-size:.95rem;outline:none;color:#3E2723; }
-    .insumos-list { max-height:220px;overflow-y:auto; }
-    .insumo-item { display:flex;align-items:center;padding:10px 18px;cursor:pointer;transition:background .2s;gap:10px; }
-    .insumo-item:hover { background:#faf0e6; }
-    .insumo-item.selected { background:#f0e4d5; }
-    .insumo-checkbox { width:18px;height:18px;accent-color:#8B4513;cursor:pointer;flex-shrink:0; }
-    .insumo-label { display:flex;flex-direction:column;cursor:pointer;flex:1;margin:0; }
-    .insumo-nombre { font-weight:600;color:#3E2723;font-size:.95rem; }
-    .insumo-tipo { font-size:.8rem;color:#B2967D; }
+.insumo-cantidad-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #faf0e6;
+    border: 1px solid #e8d5c0;
+    border-radius: 12px;
+    padding: 10px 14px;
+    animation: tagAppear 0.2s ease;
+}
 
-    /* Cantidades */
-    .insumos-cantidades { margin-top:12px;display:flex;flex-direction:column;gap:10px; }
-    .insumo-cantidad-row { display:flex;align-items:center;gap:12px;background:#faf0e6;border:1px solid #e8d5c0;border-radius:12px;padding:10px 14px; }
-    .insumo-cantidad-info { display:flex;flex-direction:column;flex:1;min-width:0; }
-    .insumo-cantidad-nombre { font-weight:600;color:#3E2723;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-    .insumo-cantidad-tipo { font-size:.78rem;color:#B2967D; }
-    .insumo-cantidad-input-wrap { display:flex;align-items:center;gap:6px; }
-    .insumo-cantidad-input { width:80px;padding:8px 10px;border:2px solid #e8d5c0;border-radius:10px;font-size:.95rem;color:#3E2723;text-align:center;transition:border-color .2s; }
-    .insumo-cantidad-input:focus { outline:none;border-color:#8B4513; }
-    .insumo-unidad-badge { background:linear-gradient(135deg,#8B4513,#A0522D);color:white;padding:5px 10px;border-radius:8px;font-size:.85rem;font-weight:600;min-width:32px;text-align:center; }
-    .insumo-quitar-btn { background:none;border:none;color:#B2967D;cursor:pointer;font-size:.9rem;padding:4px 6px;border-radius:6px;transition:all .2s; }
-    .insumo-quitar-btn:hover { color:#dc3545;background:#f8d7da; }
+.insumo-cantidad-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.insumo-cantidad-nombre {
+    font-weight: 600;
+    color: #3E2723;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.insumo-cantidad-tipo {
+    font-size: 0.78rem;
+    color: #B2967D;
+}
+
+.insumo-cantidad-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.insumo-cantidad-input {
+    width: 80px;
+    padding: 8px 10px;
+    border: 2px solid #e8d5c0;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    color: #3E2723;
+    text-align: center;
+    transition: border-color 0.2s;
+}
+
+.insumo-cantidad-input:focus {
+    outline: none;
+    border-color: #8B4513;
+}
+
+.insumo-unidad-badge {
+    background: linear-gradient(135deg, #8B4513, #A0522D);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    min-width: 32px;
+    text-align: center;
+}
+
+.insumo-quitar-btn {
+    background: none;
+    border: none;
+    color: #B2967D;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 4px 6px;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.insumo-quitar-btn:hover {
+    color: #dc3545;
+    background: #f8d7da;
+}
+
+@keyframes tagAppear {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 </style>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">

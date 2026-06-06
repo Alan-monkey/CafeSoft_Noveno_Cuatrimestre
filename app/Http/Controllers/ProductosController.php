@@ -23,8 +23,10 @@ class ProductosController extends Controller
     public function crear()
     {
         $user = auth()->guard('usuarios')->user();
-        return view('productos.crear', compact('user'));
+        $insumos = \App\Models\Insumo::orderBy('nombre')->get();
+        return view('productos.crear', compact('user', 'insumos'));
     }
+
 
     public function store(Request $request)
     {
@@ -33,8 +35,9 @@ class ProductosController extends Controller
             'precio' => 'required|numeric',
             'descripcion' => 'required|string',
             'imagen' => 'nullable|image|max:2048',
-            'stock_inicial' => 'required|integer|min:0',
-            'stock_minimo' => 'required|integer|min:0',
+
+            'insumos' => 'required|array|min:1',
+            'insumos.*' => 'string',
         ]);
 
         // Preparar datos para la API Python
@@ -48,9 +51,9 @@ class ProductosController extends Controller
             'precio' => (float)$request->precio,
             'descripcion' => $request->descripcion,
             'imagen' => $imagePath,
-            'stock_inicial' => (int)$request->stock_inicial,
-            'stock_minimo' => (int)$request->stock_minimo,
             'fecha_actualizacion' => now()->toIso8601String(),
+            'insumos' => $request->insumos,
+
         ];
 
         // Enviar ÚNICAMENTE a la API Python
@@ -80,8 +83,11 @@ class ProductosController extends Controller
                     'precio' => $item['precio'] ?? 0,
                     'descripcion' => $item['descripcion'] ?? '',
                     'imagen' => $item['imagen'] ?? null,
+                    'insumos' => $item['insumos'] ?? [],
+                    'insumos_cantidad' => $item['insumos_cantidad'] ?? [],
                 ];
             });
+
             
             return view('productos.leer', compact('productos', 'user'));
         } else {
@@ -209,35 +215,61 @@ class ProductosController extends Controller
         }
     }
 
-    public function update(Request $request, Producto $producto)
-    {
-        $request->validate([
-            'nombre' => 'required|string|max:255',
-            'precio' => 'required|numeric',
-            'descripcion' => 'required|string',
-            'imagen' => 'nullable|image|max:2048',
-        ]);
+public function update(Request $request, $id)
+{
+    $request->validate([
+        'nombre' => 'required|string|max:255',
+        'precio' => 'required|numeric',
+        'descripcion' => 'required|string',
+        'imagen' => 'nullable|image|max:2048',
+    ]);
 
-        // Preparar datos para la API Python
-        $data = [
-            'nombre' => $request->nombre,
-            'precio' => (float)$request->precio,
-            'descripcion' => $request->descripcion,
-        ];
+    $data = [
+        'nombre' => $request->nombre,
+        'precio' => (float)$request->precio,
+        'descripcion' => $request->descripcion,
+        'insumos' => $request->input('insumos', []),
+        'insumos_cantidad' => $request->input('insumos_cantidad', []),
+    ];
 
-        if ($request->hasFile('imagen')) {
-            $imagePath = $request->imagen->store('productos', 'public');
-            $data['imagen'] = $imagePath;
-        }
-
-        // Actualizar ÚNICAMENTE en la API Python
-        $response = $this->pythonApi->updateProducto($producto->_id, $data);
-
-        if ($response['success']) {
-            return redirect()->back()->with('success', 'Producto actualizado con éxito');
-        } else {
-            Log::error('Error al actualizar producto en API Python: ' . ($response['error'] ?? 'Unknown error'));
-            return redirect()->back()->with('error', 'Error al actualizar producto: ' . ($response['error'] ?? 'Error desconocido'));
-        }
+    if ($request->hasFile('imagen')) {
+        $imagePath = $request->imagen->store('productos', 'public');
+        $data['imagen'] = $imagePath;
     }
+
+    $response = $this->pythonApi->updateProducto($id, $data);
+
+    if ($response['success']) {
+        return redirect()->route('productos.leer')->with('success', 'Producto actualizado con éxito');
+    } else {
+        Log::error('Error al actualizar producto en API Python: ' . ($response['error'] ?? 'Unknown error'));
+        return redirect()->back()->with('error', 'Error al actualizar producto: ' . ($response['error'] ?? 'Error desconocido'));
+    }
+}
+
+public function editarVista($id)
+{
+    $user = auth()->guard('usuarios')->user();
+    $response = $this->pythonApi->getProducto($id);
+
+    if (!$response['success']) {
+        return back()->with('error', 'Producto no encontrado');
+    }
+
+    $data = $response['data'];
+    $producto = (object) [
+        '_id'              => $data['_id'] ?? null,
+        'nombre'           => $data['nombre'] ?? '',
+        'precio'           => $data['precio'] ?? 0,
+        'descripcion'      => $data['descripcion'] ?? '',
+        'imagen'           => $data['imagen'] ?? null,
+        'insumos'          => $data['insumos'] ?? [],
+        'insumos_cantidad' => $data['insumos_cantidad'] ?? [],
+    ];
+    $insumos = \App\Models\Insumo::orderBy('nombre')->get();
+    return view('productos.editar', compact('producto', 'user', 'insumos'));
+
+}
+
+
 }
