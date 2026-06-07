@@ -24,57 +24,34 @@ class CarritoController extends Controller
         $this->pythonApi = $pythonApi;
     }
 
-    public function agregar(Request $request, $id)
-    {
-        $productoResponse = $this->pythonApi->getProducto($id);
+public function agregar(Request $request, $id)
+{
+    $productoResponse = $this->pythonApi->getProducto($id);
 
-        if (!$productoResponse['success']) {
-            return back()->with('error', 'Producto no encontrado');
-        }
-
-        $producto = (object) $productoResponse['data'];
-
-        $stockResponse = $this->pythonApi->verificarStock($id);
-
-        if (!$stockResponse['success']) {
-            return back()->with('error', 'Error al verificar inventario');
-        }
-
-        $inventario = $stockResponse['data'];
-
-        if (!$inventario || $inventario['stock_actual'] <= 0) {
-            return back()->with('error', 'Producto agotado');
-        }
-
-        $carrito = session()->get('carrito', []);
-        $cantidad_solicitada = 1;
-
-        if (isset($carrito[$id])) {
-            $cantidad_solicitada = $carrito[$id]['cantidad'] + 1;
-        }
-
-        if ($inventario['stock_actual'] < $cantidad_solicitada) {
-            return back()->with('error', 'Stock insuficiente. Disponible: ' . $inventario['stock_actual']);
-        }
-
-        if (isset($carrito[$id])) {
-            $carrito[$id]['cantidad'] = $cantidad_solicitada;
-            $carrito[$id]['stock_disponible'] = $inventario['stock_actual'];
-        } else {
-            $carrito[$id] = [
-                'id' => $id,
-                'nombre' => $producto->nombre,
-                'precio' => $producto->precio,
-                'imagen' => $producto->imagen ?? null,
-                'cantidad' => 1,
-                'stock_disponible' => $inventario['stock_actual']
-            ];
-        }
-
-        session()->put('carrito', $carrito);
-
-        return back()->with('success', 'Producto agregado al carrito');
+    if (!$productoResponse['success']) {
+        return back()->with('error', 'Producto no encontrado');
     }
+
+    $producto = (object) $productoResponse['data'];
+
+    $carrito = session()->get('carrito', []);
+
+    if (isset($carrito[$id])) {
+        $carrito[$id]['cantidad'] += 1;
+    } else {
+        $carrito[$id] = [
+            'id' => $id,
+            'nombre' => $producto->nombre,
+            'precio' => $producto->precio,
+            'imagen' => $producto->imagen ?? null,
+            'cantidad' => 1,
+        ];
+    }
+
+    session()->put('carrito', $carrito);
+
+    return back()->with('success', 'Producto agregado al carrito');
+}
 
     public function ver()
 {
@@ -132,24 +109,8 @@ class CarritoController extends Controller
             return back()->with('error', 'Producto no encontrado en el carrito');
         }
 
-        $stockResponse = $this->pythonApi->verificarStock($id);
-
-        if (!$stockResponse['success']) {
-            return back()->with('error', 'Error al verificar inventario');
-        }
-
-        $inventario = $stockResponse['data'];
-
-        if (!$inventario) {
-            return back()->with('error', 'No se pudo verificar el stock');
-        }
-
-        if ($inventario['stock_actual'] < $request->cantidad) {
-            return back()->with('error', 'Stock insuficiente. Disponible: ' . $inventario['stock_actual']);
-        }
-
         $carrito[$id]['cantidad'] = $request->cantidad;
-        $carrito[$id]['stock_disponible'] = $inventario['stock_actual'];
+
         session()->put('carrito', $carrito);
 
         return back()->with('success', 'Cantidad actualizada');
@@ -232,22 +193,11 @@ class CarritoController extends Controller
 
         $cambio = $efectivoRecibido - $totalFinal;
 
-        // PASO 1: Verificar stock via API
+        // PASO 1: Verificar que los productos existen
         foreach ($carrito as $item) {
-            $stockResponse = $this->pythonApi->verificarStock($item['id']);
-
-            if (!$stockResponse['success']) {
-                return redirect()->back()->with('error', 'Error al verificar stock para ' . $item['nombre']);
-            }
-
-            $inventario = $stockResponse['data'];
-
-            if (!$inventario) {
-                return redirect()->back()->with('error', 'No hay inventario registrado para ' . $item['nombre']);
-            }
-
-            if ($inventario['stock_actual'] < $item['cantidad']) {
-                return redirect()->back()->with('error', 'Stock insuficiente para ' . $item['nombre'] . '. Disponible: ' . $inventario['stock_actual']);
+            $productoResponse = $this->pythonApi->getProducto($item['id']);
+            if (!$productoResponse['success']) {
+                return redirect()->back()->with('error', 'Producto no encontrado: ' . $item['nombre']);
             }
         }
 
@@ -298,8 +248,31 @@ class CarritoController extends Controller
             }
 
 
-            // PASO 4: Actualizar inventario via API
-            $this->pythonApi->actualizarStockMasivo($carrito);
+            // PASO 4: Descontar insumos por cada producto vendido
+            foreach ($carrito as $item) {
+                $productoResponse = $this->pythonApi->getProducto($item['id']);
+                if (!$productoResponse['success']) continue;
+
+                $productoData    = $productoResponse['data'];
+                $insumos         = $productoData['insumos'] ?? [];
+                $insumosCantidad = $productoData['insumos_cantidad'] ?? [];
+                $cantidadVendida = $item['cantidad'];
+
+                foreach ($insumos as $insumoId) {
+                    $cantidadPorUnidad = floatval($insumosCantidad[$insumoId] ?? 0);
+                    if ($cantidadPorUnidad <= 0) continue;
+
+                    $insumo = \App\Models\Insumo::find($insumoId);
+                    if (!$insumo) continue;
+
+                    $nuevaCantidad = floatval($insumo->cantidad) - ($cantidadPorUnidad * $cantidadVendida);
+                    $insumo->cantidad = max(0, $nuevaCantidad);
+                    $insumo->save();
+
+                    Log::info("Insumo {$insumo->nombre}: -{$cantidadPorUnidad} x {$cantidadVendida} = nuevo stock {$insumo->cantidad}");
+                }
+            }
+
 
             // Guardar datos en sesión
             session()->put('pago_total', $totalFinal);
