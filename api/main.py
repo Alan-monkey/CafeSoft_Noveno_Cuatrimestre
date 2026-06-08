@@ -580,3 +580,21 @@ def get_prediccion_insumos():
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+#ARBOL DE DESICIONES
+
+@app.get("/ml/clasificacion-insumos")
+def get_clasificacion_insumos():
+    """Retorna clasificación de insumos por árbol de decisión"""
+    try:
+        path = os.path.join(os.path.dirname(__file__), "clasificacion_insumos.json")
+        if not os.path.exists(path):
+            raise HTTPException(status_code=404, detail="Datos no disponibles. Ejecuta ml_trainer.py")
+        with open(path, "r", encoding="utf-8") as f:
+            data = json_lib.load(f)
+        return {"success": True, "data": data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -504,6 +504,195 @@ def predecir_insumos_semana(spark, db):
     print(f"✓ Predicción insumos | Total: {len(resultado)} | Alertas stock bajo: {alertas}")
     return resultado
 
+#ARBOL DE DESICIONES
+
+def clasificar_insumos_arbol(spark, db):
+    """
+    Árbol de decisión enfocado en insumos próximos a caducar (≤14 días).
+    Propone estrategias de venta: descuento individual, paquete o liquidación urgente.
+    Guarda clasificacion_insumos.json
+    """
+    from pyspark.ml.classification import DecisionTreeClassifier
+    from pyspark.ml.feature import VectorAssembler
+    from datetime import date
+
+    insumos = list(db["Insumos"].find())
+    if not insumos:
+        print("⚠ Sin insumos para clasificar")
+        with open(os.path.join(os.path.dirname(__file__), "clasificacion_insumos.json"), "w") as f:
+            json.dump([], f)
+        return []
+
+    # Cargar necesidad semanal del JSON de regresión si existe
+    pred_path = os.path.join(os.path.dirname(__file__), "prediccion_insumos.json")
+    necesidad_map = {}
+    if os.path.exists(pred_path):
+        with open(pred_path, "r", encoding="utf-8") as f:
+            preds = json.load(f)
+        for p in preds:
+            necesidad_map[p["nombre"]] = p.get("necesidad_semana", 0)
+
+    # Buscar productos que usan cada insumo
+    productos_por_insumo = {}
+    productos = list(db["tb_productos"].find({}, {"nombre": 1, "precio": 1, "insumos": 1}))
+    for prod in productos:
+        for iid in prod.get("insumos", []):
+            key = str(iid)
+            if key not in productos_por_insumo:
+                productos_por_insumo[key] = []
+            productos_por_insumo[key].append({
+                "nombre": prod.get("nombre", ""),
+                "precio": float(prod.get("precio", 0)),
+            })
+
+    hoy = datetime.utcnow().date()
+    filas = []
+    meta  = []  # datos completos para el JSON final
+
+    for ins in insumos:
+        nombre    = ins.get("nombre", "")
+        cantidad  = float(ins.get("cantidad", 0) or 0)
+        caducidad = ins.get("caducidad", "NA")
+        iid       = str(ins.get("_id", ""))
+
+        # Calcular días para caducar
+        if caducidad and caducidad != "NA":
+            try:
+                fecha_cad = datetime.strptime(caducidad[:10], "%Y-%m-%d").date()
+                dias_cad  = (fecha_cad - hoy).days
+            except Exception:
+                dias_cad = 999
+        else:
+            dias_cad = 999  # no caduca
+
+        necesidad_sem = float(necesidad_map.get(nombre, 0))
+        ratio_consumo = (cantidad / necesidad_sem) if necesidad_sem > 0 else 999.0
+
+        # Etiqueta de entrenamiento basada en reglas de negocio
+        if dias_cad > 14:
+            label = 0.0  # Sin urgencia
+        elif dias_cad <= 3:
+            label = 3.0  # Liquidar urgente
+        elif dias_cad <= 7:
+            label = 2.0  # Descuento por paquete
+        else:
+            label = 1.0  # Descuento individual (8-14 días)
+
+        filas.append((
+            nombre,
+            float(dias_cad) if dias_cad < 999 else 999.0,
+            cantidad,
+            necesidad_sem,
+            ratio_consumo,
+            label,
+            iid,
+            caducidad,
+        ))
+
+    if len(filas) < 3:
+        print("⚠ Pocos insumos para entrenar árbol")
+        with open(os.path.join(os.path.dirname(__file__), "clasificacion_insumos.json"), "w") as f:
+            json.dump([], f)
+        return []
+
+    df = spark.createDataFrame(
+        [(f[0], f[1], f[2], f[3], f[4], f[5]) for f in filas],
+        ["nombre", "dias_cad", "cantidad", "necesidad_sem", "ratio_consumo", "label"]
+    )
+
+    assembler = VectorAssembler(
+        inputCols=["dias_cad", "cantidad", "necesidad_sem", "ratio_consumo"],
+        outputCol="features",
+        handleInvalid="skip"
+    )
+    df_ml = assembler.transform(df)
+    train, test = df_ml.randomSplit([0.8, 0.2], seed=42)
+    if train.count() == 0:
+        train = df_ml
+
+    dt = DecisionTreeClassifier(featuresCol="features", labelCol="label", maxDepth=4)
+    model = dt.fit(train)
+    predicciones = model.transform(df_ml)
+
+    etiquetas = {
+        0.0: "Sin urgencia",
+        1.0: "Descuento individual",
+        2.0: "Descuento por paquete",
+        3.0: "Liquidar urgente",
+    }
+    descuentos = {
+        0.0: 0,
+        1.0: 10,   # 10% descuento individual
+        2.0: 20,   # 20% en paquete
+        3.0: 35,   # 35% liquidación
+    }
+    niveles = {
+        0.0: "success",
+        1.0: "info",
+        2.0: "warning",
+        3.0: "danger",
+    }
+
+    rows = predicciones.select(
+        "nombre", "dias_cad", "cantidad", "necesidad_sem", "ratio_consumo", "prediction"
+    ).collect()
+
+    # Construir resultado con propuestas
+    resultado = []
+    fila_map  = {f[0]: f for f in filas}
+
+    for row in rows:
+        pred     = float(row["prediction"])
+        nombre   = row["nombre"]
+        dias_cad = float(row["dias_cad"])
+        iid      = fila_map[nombre][6] if nombre in fila_map else ""
+        caducidad_raw = fila_map[nombre][7] if nombre in fila_map else "NA"
+
+        prods_asociados = productos_por_insumo.get(iid, [])
+        descuento_pct   = descuentos[pred]
+
+        propuestas = []
+        for prod in prods_asociados:
+            precio_orig     = prod["precio"]
+            precio_desc     = round(precio_orig * (1 - descuento_pct / 100), 2)
+            if pred == 2.0:
+                # Propuesta de paquete: 2x1 o 3 por el precio de 2
+                propuestas.append({
+                    "producto":      prod["nombre"],
+                    "precio_normal": precio_orig,
+                    "propuesta":     f"Paquete 2x1 — ${precio_orig} los dos",
+                    "ahorro":        round(precio_orig, 2),
+                })
+            elif pred >= 1.0:
+                propuestas.append({
+                    "producto":      prod["nombre"],
+                    "precio_normal": precio_orig,
+                    "propuesta":     f"{descuento_pct}% descuento — ${precio_desc}",
+                    "ahorro":        round(precio_orig - precio_desc, 2),
+                })
+
+        resultado.append({
+            "nombre":       nombre,
+            "caducidad":    caducidad_raw,
+            "dias_restantes": int(dias_cad) if dias_cad < 999 else None,
+            "cantidad":     round(float(row["cantidad"]), 3),
+            "necesidad_sem": round(float(row["necesidad_sem"]), 3),
+            "clasificacion": etiquetas[pred],
+            "nivel":         niveles[pred],
+            "descuento_pct": descuento_pct,
+            "propuestas":    propuestas,
+            "prediccion":    pred,
+        })
+
+    # Solo mostrar los que caducan en ≤14 días, ordenados por urgencia
+    resultado_filtrado = [r for r in resultado if r["dias_restantes"] is not None and r["dias_restantes"] <= 14]
+    resultado_filtrado.sort(key=lambda x: x["dias_restantes"])
+
+    with open(os.path.join(os.path.dirname(__file__), "clasificacion_insumos.json"), "w") as f:
+        json.dump(resultado_filtrado, f, ensure_ascii=False)
+
+    print(f"✓ Árbol caducidad | Próx. a caducar (≤14d): {len(resultado_filtrado)} insumos")
+    return resultado_filtrado
 
 if __name__ == "__main__":
     client, db = conectar_mongo()
@@ -518,6 +707,8 @@ if __name__ == "__main__":
     analizar_productos_mes(spark, db)
     predecir_productos_semana(spark, db) 
     predecir_insumos_semana(spark, db)
+    clasificar_insumos_arbol(spark, db)
+
 
     spark.stop()
     client.close()

@@ -131,13 +131,22 @@ class InsumosController extends Controller
             ->with('success', 'Insumo eliminado correctamente.');
     }
 
-    public function estadisticas()
+public function estadisticas()
 {
     $user = auth()->guard('usuarios')->user();
     $pythonApi = app(PythonApiService::class);
-    $response = $pythonApi->getPrediccionInsumos();
-    $predicciones = $response['success'] ? $response['data'] : [];
-    return view('inventario.estadisticas', compact('predicciones', 'user'));
+
+    $resPrediccion    = $pythonApi->getPrediccionInsumos();
+    $resClasificacion = $pythonApi->getClasificacionInsumos();
+
+    $predicciones    = $resPrediccion['success']    ? $resPrediccion['data']    : [];
+    $clasificaciones = $resClasificacion['success'] ? $resClasificacion['data'] : [];
+
+    return view('inventario.estadisticas', compact('predicciones', 'clasificaciones', 'user'));
 }
+
+
+
+
 
 }

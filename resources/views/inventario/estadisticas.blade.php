@@ -68,13 +68,9 @@
                     </h5>
                     <canvas id="graficaDispersion" height="100"></canvas>
                 </div>
-
-                <!-- Tabla detalle -->
-                <h5 class="chart-title mb-3">
-                    <i class="fas fa-table me-2"></i> Detalle por insumo
-                </h5>
-                <div class="table-responsive">
-                    <table class="table inventario-table">
+                <!-- Tabla detalle desplegable -->
+                <div style="border:1px solid #e8d5c0;border-radius:15px;overflow:hidden;margin-bottom:20px;">
+                    <table class="table inventario-table" style="margin-bottom:0;">
                         <thead>
                             <tr>
                                 <th>Insumo</th>
@@ -86,8 +82,8 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($predicciones as $p)
-                            <tr>
+                            @foreach($predicciones as $index => $p)
+                            <tr class="{{ $index >= 3 ? 'fila-extra' : '' }}" @if($index >= 3) style="display:none;" @endif>
                                 <td><strong style="color:#3E2723;">{{ $p['nombre'] }}</strong></td>
                                 <td><span class="tipo-badge tipo-{{ $p['tipo'] }}">{{ ucfirst($p['tipo']) }}</span></td>
                                 <td class="text-center">{{ number_format($p['consumo_mes'], 3) }}</td>
@@ -97,7 +93,6 @@
                                     </span>
                                 </td>
                                 <td class="text-center">{{ number_format($p['stock_actual'], 3) }}</td>
-      
                                 <td class="text-center">
                                     @if($p['alerta'])
                                         <span class="badge-estado agotado">⚠ Stock bajo</span>
@@ -109,9 +104,108 @@
                             @endforeach
                         </tbody>
                     </table>
+                    @if(count($predicciones) > 3)
+                    <button class="btn-ver-mas" id="btnVerMas" onclick="toggleDetalle()">
+                        <i class="fas fa-chevron-down me-2" id="detalleChevron"></i>
+                        Ver todos los insumos ({{ count($predicciones) - 3 }} más)
+                    </button>
+                    @endif
                 </div>
 
+
+
+                {{-- ===== ÁRBOL DE DECISIÓN: PROPUESTAS DE VENTA ===== --}}
+                @if(!empty($clasificaciones))
+                <hr style="border-color:#e8d5c0;margin:40px 0;">
+
+                <h5 class="chart-title mb-1">
+                    <i class="fas fa-sitemap me-2"></i> Árbol de Decisión — Propuestas de venta por caducidad
+                </h5>
+                <p style="color:#8B6B4F;font-size:.9rem;margin-bottom:20px;">
+                    Insumos que caducan en los próximos 14 días con propuestas de descuento o paquete para acelerar su rotación.
+                </p>
+
+                @php
+                    $urgentes = collect($clasificaciones)->where('prediccion', 3)->count();
+                    $paquete  = collect($clasificaciones)->where('prediccion', 2)->count();
+                    $descInd  = collect($clasificaciones)->where('prediccion', 1)->count();
+                @endphp
+
+                <div class="inventario-resumen mb-4">
+                    <div class="resumen-card danger">
+                        <i class="fas fa-fire"></i>
+                        <span class="resumen-valor">{{ $urgentes }}</span>
+                        <span class="resumen-label">Liquidar urgente</span>
+                    </div>
+                    <div class="resumen-card warning">
+                        <i class="fas fa-box-open"></i>
+                        <span class="resumen-valor">{{ $paquete }}</span>
+                        <span class="resumen-label">Descuento por paquete</span>
+                    </div>
+                    <div class="resumen-card" style="border-color:rgba(23,162,184,.3)">
+                        <i class="fas fa-tag" style="color:#17a2b8"></i>
+                        <span class="resumen-valor">{{ $descInd }}</span>
+                        <span class="resumen-label">Descuento individual</span>
+                    </div>
+                </div>
+
+                @foreach($clasificaciones as $c)
+                <div class="propuesta-card nivel-{{ $c['nivel'] }} mb-3">
+                    <div class="propuesta-header">
+                        <div class="propuesta-info">
+                            <span class="propuesta-nombre">{{ $c['nombre'] }}</span>
+                            <span class="propuesta-cad">
+                                <i class="fas fa-calendar-times me-1"></i>
+                                Caduca: {{ $c['caducidad'] !== 'NA' ? \Carbon\Carbon::parse($c['caducidad'])->format('d/m/Y') : 'N/A' }}
+                                @if($c['dias_restantes'] !== null)
+                                    <strong>({{ $c['dias_restantes'] }} días)</strong>
+                                @endif
+                            </span>
+                        </div>
+                        <div class="propuesta-badge-wrap">
+                            @if($c['nivel'] === 'danger')
+                                <span class="badge-estado agotado">🔴 {{ $c['clasificacion'] }}</span>
+                            @elseif($c['nivel'] === 'warning')
+                                <span class="badge-estado bajo">🟡 {{ $c['clasificacion'] }}</span>
+                            @elseif($c['nivel'] === 'info')
+                                <span class="badge-estado" style="background:#17a2b8;color:white;">🔵 {{ $c['clasificacion'] }}</span>
+                            @else
+                                <span class="badge-estado normal">🟢 {{ $c['clasificacion'] }}</span>
+                            @endif
+                            @if($c['descuento_pct'] > 0)
+                                <span class="descuento-badge">-{{ $c['descuento_pct'] }}%</span>
+                            @endif
+                        </div>
+                    </div>
+
+                    @if(!empty($c['propuestas']))
+                    <div class="propuestas-lista">
+                        <small style="color:#8B6B4F;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">
+                            <i class="fas fa-lightbulb me-1"></i> Propuestas de venta:
+                        </small>
+                        <div class="propuestas-grid mt-2">
+                            @foreach($c['propuestas'] as $prop)
+                            <div class="propuesta-item">
+                                <i class="fas fa-store me-1" style="color:#8B4513"></i>
+                                <span class="prop-producto">{{ $prop['producto'] }}</span>
+                                <span class="prop-texto">{{ $prop['propuesta'] }}</span>
+                                <span class="prop-ahorro">Ahorro: ${{ number_format($prop['ahorro'], 2) }}</span>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                    @else
+                    <div style="padding:10px 0;color:#B2967D;font-size:.9rem;">
+                        <i class="fas fa-info-circle me-1"></i> Sin productos asociados a este insumo aún.
+                    </div>
+                    @endif
+                </div>
+                @endforeach
+
+                @endif
+
             @endif
+            
         </div>
     </div>
 </div>
@@ -133,7 +227,6 @@ const coloresAlerta = datos.map(d => {
     return 'rgba(40,167,69,0.85)';                          // verde — poca necesidad
 });
 
-// Gráfica de barras
 
 // Gráfica de dispersión
 new Chart(document.getElementById('graficaDispersion'), {
@@ -162,10 +255,27 @@ new Chart(document.getElementById('graficaDispersion'), {
         }
     }
 });
+
 @endif
+
+function toggleDetalle() {
+    const filas   = document.querySelectorAll('.fila-extra');
+    const chevron = document.getElementById('detalleChevron');
+    const btn     = document.getElementById('btnVerMas');
+    const oculto  = filas.length > 0 && filas[0].style.display === 'none';
+
+    filas.forEach(f => f.style.display = oculto ? '' : 'none');
+    chevron.className = oculto ? 'fas fa-chevron-up me-2' : 'fas fa-chevron-down me-2';
+    btn.innerHTML = oculto
+        ? '<i class="fas fa-chevron-up me-2" id="detalleChevron"></i> Ocultar'
+        : '<i class="fas fa-chevron-down me-2" id="detalleChevron"></i> Ver todos los insumos ({{ count($predicciones) - 3 }} más)';
+}
+
+
 </script>
 
 <style>
+.resumen-card.warning i { color:#ffc107; }
 .inventario-container { position:relative;min-height:100vh;background:linear-gradient(145deg,#faf0e6,#f5e6d3);font-family:'Poppins','Segoe UI',sans-serif;padding:20px 0;overflow-x:hidden; }
 .coffee-elements { position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0; }
 .coffee-cup { position:absolute;opacity:.15; }
@@ -233,6 +343,58 @@ new Chart(document.getElementById('graficaDispersion'), {
 .badge-estado.agotado { background:#dc3545;color:white; }
 
 .empty-state { text-align:center;padding:40px; }
+.propuesta-card { background:white;border-radius:18px;padding:20px 25px;box-shadow:0 3px 12px rgba(0,0,0,.06);border-left:5px solid #e8d5c0;transition:all .3s; }
+.propuesta-card:hover { transform:translateY(-3px);box-shadow:0 10px 25px rgba(139,69,19,.12); }
+.propuesta-card.nivel-danger  { border-left-color:#dc3545; }
+.propuesta-card.nivel-warning { border-left-color:#ffc107; }
+.propuesta-card.nivel-info    { border-left-color:#17a2b8; }
+.propuesta-card.nivel-success { border-left-color:#28a745; }
+
+.propuesta-header { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:12px; }
+.propuesta-nombre { display:block;font-weight:700;color:#3E2723;font-size:1.05rem; }
+.propuesta-cad    { font-size:.85rem;color:#8B6B4F; }
+.propuesta-badge-wrap { display:flex;gap:8px;align-items:center;flex-wrap:wrap; }
+
+.descuento-badge { background:linear-gradient(135deg,#8B4513,#A0522D);color:white;padding:4px 12px;border-radius:20px;font-weight:700;font-size:.85rem; }
+
+.propuestas-lista { background:#faf5f0;border-radius:12px;padding:14px 18px; }
+.propuestas-grid  { display:flex;flex-direction:column;gap:8px; }
+.propuesta-item   { display:flex;align-items:center;gap:10px;flex-wrap:wrap; }
+.prop-producto    { font-weight:600;color:#3E2723;min-width:150px; }
+.prop-texto       { color:#5D4037;flex:1; }
+.prop-ahorro      { background:linear-gradient(145deg,#d4edda,#c3e6cb);color:#155724;padding:3px 10px;border-radius:20px;font-size:.82rem;font-weight:600; }
+.detalle-toggle-header { display:flex;justify-content:space-between;align-items:center;background:#f8f4f0;border:1px solid #e8d5c0;border-radius:15px;padding:16px 22px;cursor:pointer;transition:all .3s;user-select:none; }
+
+#detalleContenido {
+    border: 1px solid #e8d5c0;
+    border-radius: 0 0 15px 15px;
+    padding: 20px;
+    background: white;
+    margin-bottom: 10px;
+}
+
+.btn-ver-mas {
+    width: 100%;
+    background: #f8f4f0;
+    border: 1px solid #e8d5c0;
+    border-radius: 0 0 15px 15px;
+    padding: 14px;
+    color: #8B4513;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    font-size: .95rem;
+}
+.btn-ver-mas:hover {
+    background: #f0e8dc;
+    box-shadow: 0 4px 12px rgba(139,69,19,.1);
+}
+
+
 </style>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">

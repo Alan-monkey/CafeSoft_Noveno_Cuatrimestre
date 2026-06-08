@@ -570,4 +570,20 @@ public function getPrediccionInsumos()
 }
 
 
+public function getClasificacionInsumos()
+{
+    try {
+        $response = Http::timeout($this->timeout)
+            ->get($this->baseUrl . '/ml/clasificacion-insumos');
+        if ($response->successful()) {
+            return ['success' => true, 'data' => $response->json()['data'] ?? []];
+        }
+        return ['success' => false, 'error' => 'Datos no disponibles'];
+    } catch (\Exception $e) {
+        Log::error('PythonApiService::getClasificacionInsumos: ' . $e->getMessage());
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+
 }
