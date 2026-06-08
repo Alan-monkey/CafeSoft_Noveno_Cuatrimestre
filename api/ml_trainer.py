@@ -299,6 +299,212 @@ def predecir_productos_semana(spark, db):
     return data
 
 
+#REGRESION LINAL PARA INSUMOS
+
+
+def predecir_insumos_semana(spark, db):
+    """
+    Regresión lineal para predecir cuánto insumo se necesitará
+    la próxima semana basándose en el historial de ventas.
+    Guarda prediccion_insumos.json
+    """
+    from pyspark.ml.regression import LinearRegression
+    from pyspark.ml.feature import VectorAssembler
+    from pyspark.sql.functions import col, sum as spark_sum, avg, round as spark_round
+
+    fecha_limite = datetime.utcnow() - timedelta(days=30)
+
+    # Leer ventas recientes
+    ventas = list(db["ventas"].find(
+        {"created_at": {"$gte": fecha_limite}},
+        {"productos": 1, "created_at": 1}
+    ))
+
+    if not ventas:
+        print("⚠ Sin ventas para predecir insumos")
+        with open(os.path.join(os.path.dirname(__file__), "prediccion_insumos.json"), "w") as f:
+            json.dump([], f)
+        return []
+
+    # Acumular cantidad vendida por producto_id
+    ventas_por_producto = {}
+    for venta in ventas:
+        productos = venta.get("productos", {})
+        if isinstance(productos, dict):
+            items = productos.values()
+        elif isinstance(productos, list):
+            items = productos
+        else:
+            continue
+
+        for producto in items:
+            pid = str(producto.get("producto_id", ""))
+            cantidad = producto.get("cantidad", 0)
+            try:
+                cantidad = float(cantidad)
+                if pid and cantidad > 0:
+                    ventas_por_producto[pid] = ventas_por_producto.get(pid, 0) + cantidad
+            except (TypeError, ValueError):
+                continue
+
+    if not ventas_por_producto:
+        print("⚠ No se pudo acumular ventas por producto")
+        with open(os.path.join(os.path.dirname(__file__), "prediccion_insumos.json"), "w") as f:
+            json.dump([], f)
+        return []
+
+    # Para cada producto, obtener sus insumos y cantidades
+    filas_insumos = {}  # insumo_id -> {nombre, tipo, cantidad_acumulada, unidad}
+
+    for pid, total_vendido in ventas_por_producto.items():
+        try:
+            from bson import ObjectId
+            producto = db["tb_productos"].find_one({"_id": ObjectId(pid)})
+        except Exception:
+            producto = db["tb_productos"].find_one({"_id": pid})
+
+        if not producto:
+            continue
+
+        insumos          = producto.get("insumos", [])
+        insumos_cantidad = producto.get("insumos_cantidad", {})
+
+        for insumo_id in insumos:
+            cantidad_por_unidad = float(insumos_cantidad.get(str(insumo_id), 0) or 0)
+            if cantidad_por_unidad <= 0:
+                continue
+
+            consumo_total = cantidad_por_unidad * total_vendido
+
+            if insumo_id not in filas_insumos:
+                # Buscar nombre y tipo del insumo
+                try:
+                    insumo_doc = db["Insumos"].find_one({"_id": ObjectId(insumo_id)})
+                except Exception:
+                    insumo_doc = db["Insumos"].find_one({"_id": insumo_id})
+
+                nombre_insumo = insumo_doc["nombre"] if insumo_doc else str(insumo_id)
+                tipo_insumo   = insumo_doc.get("tipo", "unidad") if insumo_doc else "unidad"
+                stock_actual  = float(insumo_doc.get("cantidad", 0) or 0) if insumo_doc else 0
+
+                filas_insumos[insumo_id] = {
+                    "nombre":         nombre_insumo,
+                    "tipo":           tipo_insumo,
+                    "consumo_mes":    0.0,
+                    "stock_actual":   stock_actual,
+                }
+
+            filas_insumos[insumo_id]["consumo_mes"] += consumo_total
+
+    if not filas_insumos:
+        print("⚠ No se encontraron insumos asociados a las ventas")
+        with open(os.path.join(os.path.dirname(__file__), "prediccion_insumos.json"), "w") as f:
+            json.dump([], f)
+        return []
+
+    # Construir DataFrame Spark para regresión
+    # Features: consumo_mes (últimos 30 días)
+    # Label: necesidad_semana = consumo_mes / 4 (promedio semanal)
+    filas_spark = []
+    for iid, data in filas_insumos.items():
+        consumo_mes     = data["consumo_mes"]
+        necesidad_sem   = consumo_mes / 4.0
+        filas_spark.append((
+            str(iid),
+            data["nombre"],
+            data["tipo"],
+            float(consumo_mes),
+            float(necesidad_sem),
+            float(data["stock_actual"]),
+        ))
+
+    df = spark.createDataFrame(
+        filas_spark,
+        ["insumo_id", "nombre", "tipo", "consumo_mes", "necesidad_semana", "stock_actual"]
+    )
+
+    # Solo entrenar regresión si hay suficientes filas
+    resultado = []
+    if df.count() >= 3:
+        assembler = VectorAssembler(
+            inputCols=["consumo_mes"],
+            outputCol="features",
+            handleInvalid="skip"
+        )
+        df_ml = assembler.transform(df)
+        train, test = df_ml.randomSplit([0.8, 0.2], seed=42)
+
+        lr = LinearRegression(
+            featuresCol="features",
+            labelCol="necesidad_semana",
+            regParam=0.1
+        )
+
+        # Si train tiene al menos 1 fila
+        if train.count() > 0:
+            model = lr.fit(train)
+            predicciones = model.transform(df_ml)
+
+            rows = predicciones.select(
+                "insumo_id", "nombre", "tipo",
+                "consumo_mes", "necesidad_semana",
+                "prediction", "stock_actual"
+            ).collect()
+
+            for row in rows:
+                pred_semana  = max(0.0, float(row["prediction"]))
+                stock        = float(row["stock_actual"])
+                dias_restantes = round((stock / pred_semana * 7), 1) if pred_semana > 0 else None
+
+                resultado.append({
+                    "nombre":              row["nombre"],
+                    "tipo":                row["tipo"],
+                    "consumo_mes":         round(float(row["consumo_mes"]), 3),
+                    "necesidad_semana":    round(pred_semana, 3),
+                    "stock_actual":        round(stock, 3),
+                    "dias_restantes":      dias_restantes,
+                    "alerta":             stock < pred_semana
+                })
+        else:
+            # Fallback sin regresión
+            for iid, data in filas_insumos.items():
+                pred_semana = data["consumo_mes"] / 4.0
+                stock       = data["stock_actual"]
+                dias_restantes = round((stock / pred_semana * 7), 1) if pred_semana > 0 else None
+                resultado.append({
+                    "nombre":           data["nombre"],
+                    "tipo":             data["tipo"],
+                    "consumo_mes":      round(data["consumo_mes"], 3),
+                    "necesidad_semana": round(pred_semana, 3),
+                    "stock_actual":     round(stock, 3),
+                    "dias_restantes":   dias_restantes,
+                    "alerta":          stock < pred_semana
+                })
+    else:
+        for iid, data in filas_insumos.items():
+            pred_semana = data["consumo_mes"] / 4.0
+            stock       = data["stock_actual"]
+            dias_restantes = round((stock / pred_semana * 7), 1) if pred_semana > 0 else None
+            resultado.append({
+                "nombre":           data["nombre"],
+                "tipo":             data["tipo"],
+                "consumo_mes":      round(data["consumo_mes"], 3),
+                "necesidad_semana": round(pred_semana, 3),
+                "stock_actual":     round(stock, 3),
+                "dias_restantes":   dias_restantes,
+                "alerta":          stock < pred_semana
+            })
+
+    resultado.sort(key=lambda x: x["necesidad_semana"], reverse=True)
+
+    with open(os.path.join(os.path.dirname(__file__), "prediccion_insumos.json"), "w") as f:
+        json.dump(resultado, f, ensure_ascii=False)
+
+    alertas = sum(1 for r in resultado if r["alerta"])
+    print(f"✓ Predicción insumos | Total: {len(resultado)} | Alertas stock bajo: {alertas}")
+    return resultado
+
+
 if __name__ == "__main__":
     client, db = conectar_mongo()
 
@@ -311,6 +517,7 @@ if __name__ == "__main__":
     analizar_clientes(spark, db)
     analizar_productos_mes(spark, db)
     predecir_productos_semana(spark, db) 
+    predecir_insumos_semana(spark, db)
 
     spark.stop()
     client.close()

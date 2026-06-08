@@ -563,3 +563,20 @@ def predecir_venta(data: dict):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+#REGRESION LINEAL INSUMOS
+
+@app.get("/ml/prediccion-insumos")
+def get_prediccion_insumos():
+    """Retorna predicción de consumo de insumos para la próxima semana"""
+    try:
+        path = os.path.join(os.path.dirname(__file__), "prediccion_insumos.json")
+        if not os.path.exists(path):
+            raise HTTPException(status_code=404, detail="Datos no disponibles. Ejecuta ml_trainer.py")
+        with open(path, "r", encoding="utf-8") as f:
+            data = json_lib.load(f)
+        return {"success": True, "data": data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

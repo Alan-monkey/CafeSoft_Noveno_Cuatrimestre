@@ -106,6 +106,7 @@ Route::middleware(['auth:usuarios', 'check.user.type:0'])->group(function () {
     Route::get('/inventario/{id}/editar', [InsumosController::class, 'edit'])->name('insumos.edit');
     Route::put('/inventario/{id}',        [InsumosController::class, 'update'])->name('insumos.update');
     Route::delete('/inventario/{id}',     [InsumosController::class, 'destroy'])->name('insumos.destroy');
+    Route::get('/inventario/estadisticas', [InsumosController::class, 'estadisticas'])->name('inventario.estadisticas');
 
 
 });

@@ -43,6 +43,9 @@
             <a href="{{ route('insumos.create') }}" class="btn-nuevo">
                 <i class="fas fa-plus me-2"></i> Nuevo Insumo
             </a>
+            <a href="{{ route('inventario.estadisticas') }}" class="btn-nuevo" style="background:rgba(255,255,255,.15);">
+                <i class="fas fa-chart-line me-2"></i> Estadísticas ML
+            </a>
         </div>
 
         <!-- Tarjeta principal -->

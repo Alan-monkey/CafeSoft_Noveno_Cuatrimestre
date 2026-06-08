@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Insumo;
+use App\Services\PythonApiService;
+
 
 class InsumosController extends Controller
 {
@@ -128,4 +130,14 @@ class InsumosController extends Controller
         return redirect()->route('inventario.index')
             ->with('success', 'Insumo eliminado correctamente.');
     }
+
+    public function estadisticas()
+{
+    $user = auth()->guard('usuarios')->user();
+    $pythonApi = app(PythonApiService::class);
+    $response = $pythonApi->getPrediccionInsumos();
+    $predicciones = $response['success'] ? $response['data'] : [];
+    return view('inventario.estadisticas', compact('predicciones', 'user'));
+}
+
 }
