@@ -138,11 +138,14 @@ public function estadisticas()
 
     $resPrediccion    = $pythonApi->getPrediccionInsumos();
     $resClasificacion = $pythonApi->getClasificacionInsumos();
+    $resMapreduce = $pythonApi->getMapreduceInsumos();
+    $mapreduce    = $resMapreduce['success'] ? $resMapreduce['data'] : [];
+
 
     $predicciones    = $resPrediccion['success']    ? $resPrediccion['data']    : [];
     $clasificaciones = $resClasificacion['success'] ? $resClasificacion['data'] : [];
 
-    return view('inventario.estadisticas', compact('predicciones', 'clasificaciones', 'user'));
+    return view('inventario.estadisticas', compact('predicciones', 'clasificaciones', 'user', 'mapreduce'));
 }
 
 

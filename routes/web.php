@@ -10,6 +10,7 @@ use App\Http\Controllers\CarritoController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\InsumosController;
+use Illuminate\Support\Facades\Http;
 
 
 Route::get('/', function () {
@@ -107,6 +108,67 @@ Route::middleware(['auth:usuarios', 'check.user.type:0'])->group(function () {
     Route::put('/inventario/{id}',        [InsumosController::class, 'update'])->name('insumos.update');
     Route::delete('/inventario/{id}',     [InsumosController::class, 'destroy'])->name('insumos.destroy');
     Route::get('/inventario/estadisticas', [InsumosController::class, 'estadisticas'])->name('inventario.estadisticas');
+
+
+    
+Route::get('/analytics-insumos', function () {
+    $mapreduce    = [];
+    $predicciones = [];
+    $clasificaciones = [];
+
+    // ── MapReduce: pide datos frescos a FastAPI ──────────────────────
+    try {
+        $response = Http::timeout(10)
+                        ->get('http://127.0.0.1:8000/analytics/mapreduce-insumos');
+
+        if ($response->successful()) {
+            $mapreduce = $response->json('data') ?? [];
+        }
+    } catch (\Exception $e) {
+        // Fallback: leer el JSON en disco si la API no responde
+        $path = base_path('api/mapreduce_insumos.json');
+        if (file_exists($path)) {
+            $mapreduce = json_decode(file_get_contents($path), true) ?? [];
+        }
+    }
+
+    // ── Predicciones ML (si ya las tienes) ──────────────────────────
+    $pathML = base_path('api/predicciones.json');
+    if (file_exists($pathML)) {
+        $predicciones = json_decode(file_get_contents($pathML), true) ?? [];
+    }
+
+    // ── Clasificaciones árbol de decisión ───────────────────────────
+    $pathClasif = base_path('api/clasificaciones.json');
+    if (file_exists($pathClasif)) {
+        $clasificaciones = json_decode(file_get_contents($pathClasif), true) ?? [];
+    }
+
+    return view('inventario.estadisticas', compact(
+        'mapreduce',
+        'predicciones',
+        'clasificaciones'
+    ));
+});
+
+Route::get('/analytics-kmeans', function () {
+
+    $path = base_path('api/kmeans_productos.json');
+
+    $kmeans = [];
+
+    if(file_exists($path)){
+        $kmeans = json_decode(
+            file_get_contents($path),
+            true
+        ) ?? [];
+    }
+
+    return view(
+        'analytics.kmeans-productos',
+        compact('kmeans')
+    );
+});
 
 
 });

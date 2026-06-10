@@ -585,5 +585,20 @@ public function getClasificacionInsumos()
     }
 }
 
+public function getMapreduceInsumos()
+{
+    try {
+        $response = Http::timeout($this->timeout)
+            ->get($this->baseUrl . '/analytics/mapreduce-insumos');
+        if ($response->successful()) {
+            return ['success' => true, 'data' => $response->json()['data'] ?? []];
+        }
+        return ['success' => false, 'error' => 'Datos no disponibles'];
+    } catch (\Exception $e) {
+        Log::error('PythonApiService::getMapreduceInsumos: ' . $e->getMessage());
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
 
 }

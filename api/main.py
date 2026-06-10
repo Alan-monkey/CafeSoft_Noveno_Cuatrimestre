@@ -5,6 +5,9 @@ from bson import ObjectId
 from pyspark.ml.classification import DecisionTreeClassificationModel
 from pyspark.sql import SparkSession
 from pyspark.ml.feature import VectorAssembler
+from mapreduce import ejecutar_mapreduce_insumos
+from kmeans import ejecutar_kmeans_productos
+
 import json as json_lib
 import config
 import os
@@ -598,3 +601,66 @@ def get_clasificacion_insumos():
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+#MapReduce
+
+@app.get("/analytics/mapreduce-insumos")
+def get_mapreduce_insumos():
+    try:
+        path = os.path.join(os.path.dirname(__file__), "mapreduce_insumos.json")
+
+        usar_cache = False
+
+        if os.path.exists(path):
+            import time
+            tiempo_actual = time.time()
+            tiempo_archivo = os.path.getmtime(path)
+
+            # 300 segundos = 5 minutos
+            if tiempo_actual - tiempo_archivo < 300:
+                usar_cache = True
+
+        if usar_cache:
+            with open(path, "r", encoding="utf-8") as archivo:
+                data = json_lib.load(archivo)
+
+            return {
+                "success": True,
+                "source": "cache",
+                "data": data
+            }
+
+        data = ejecutar_mapreduce_insumos()
+
+        return {
+            "success": True,
+            "source": "mongodb",
+            "data": data
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error ejecutando MapReduce: {str(e)}"
+        )
+
+
+@app.get("/analytics/kmeans-productos")
+def get_kmeans_productos():
+    try:
+        data = ejecutar_kmeans_productos()
+
+        return {
+            "success": True,
+            "source": "mongodb",
+            "algorithm": "combos_por_historial_ventas",
+            "total_registros": len(data),
+            "data": data
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error ejecutando análisis de combos: {str(e)}"
+        )

@@ -204,6 +204,97 @@
 
                 @endif
 
+{{-- ===== MAPREDUCE: CONSUMO POR INSUMO ===== --}}
+@if(!empty($mapreduce))
+<hr style="border-color:#e8d5c0;margin:40px 0;">
+
+{{-- Encabezado con botón desplegable --}}
+<div class="d-flex align-items-center justify-content-between mb-1">
+    <h5 class="chart-title mb-0">
+        <i class="fas fa-layer-group me-2"></i> MapReduce — Consumo acumulado por insumo
+    </h5>
+    <button class="btn btn-sm" 
+            style="background:#f5ebe0;color:#8B6B4F;border:1px solid #e8d5c0;"
+            type="button" 
+            data-bs-toggle="collapse" 
+            data-bs-target="#mapreduceCollapse" 
+            aria-expanded="false">
+        <i class="fas fa-chevron-down me-1"></i> Ver tabla
+    </button>
+</div>
+<p style="color:#8B6B4F;font-size:.9rem;margin-bottom:20px;">
+    Ranking de productos que más consumen cada insumo, basado en ventas registradas.
+</p>
+
+{{-- Resumen (siempre visible) --}}
+<div class="inventario-resumen mb-4">
+    <div class="resumen-card">
+        <i class="fas fa-flask"></i>
+        <span class="resumen-valor">{{ count($mapreduce) }}</span>
+        <span class="resumen-label">Insumos analizados</span>
+    </div>
+    <div class="resumen-card">
+        <i class="fas fa-chart-line"></i>
+        <span class="resumen-valor">{{ collect($mapreduce)->sum('total_consumido') }}</span>
+        <span class="resumen-label">Consumo total acumulado</span>
+    </div>
+</div>
+
+{{-- Tabla colapsable --}}
+<div class="collapse" id="mapreduceCollapse">
+    <div style="border:1px solid #e8d5c0;border-radius:15px;overflow:hidden;margin-bottom:20px;">
+        <table class="table inventario-table" style="margin-bottom:0;">
+            <thead>
+                <tr>
+                    <th>Insumo</th>
+                    <th class="text-center">Total consumido</th>
+                    <th>Ranking de productos que usan ese insumo</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($mapreduce as $item)
+                <tr>
+                    <td><strong style="color:#3E2723;">
+                        <i class="fas fa-leaf me-1" style="color:#8B4513;"></i>
+                        {{ $item['insumo'] ?? 'Sin insumo' }}
+                    </strong></td>
+                    <td class="text-center">
+                        <span class="stock-badge normal">
+                            <i class="fas fa-chart-simple me-1"></i>{{ $item['total_consumido'] ?? 0 }}
+                        </span>
+                    </td>
+                    <td>
+                        @forelse(($item['ranking_productos'] ?? []) as $producto)
+                        <div class="mapreduce-ranking-item">
+                            <span class="mapreduce-pos">#{{ $producto['posicion'] ?? '-' }}</span>
+                            <strong style="color:#3E2723;">{{ $producto['producto'] ?? 'Sin nombre' }}</strong>
+                            <span class="mapreduce-detail"><i class="fas fa-box me-1"></i>Vendidos: {{ $producto['cantidad_vendida'] ?? 0 }}</span>
+                            <span class="mapreduce-detail"><i class="fas fa-coffee me-1"></i>Consumo est.: {{ $producto['consumo_estimado'] ?? 0 }}</span>
+                        </div>
+                        @empty
+                        <span style="color:#B2967D;font-size:.9rem;">
+                            <i class="fas fa-info-circle me-1"></i>Sin productos asociados.
+                        </span>
+                        @endforelse
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="3">
+                        <div class="empty-state">
+                            <i class="fas fa-database fa-3x mb-3" style="color:#d9b382;"></i>
+                            <p>No hay datos de MapReduce disponibles.</p>
+                        </div>
+                    </td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@endif
+
             @endif
             
         </div>
@@ -270,7 +361,15 @@ function toggleDetalle() {
         ? '<i class="fas fa-chevron-up me-2" id="detalleChevron"></i> Ocultar'
         : '<i class="fas fa-chevron-down me-2" id="detalleChevron"></i> Ver todos los insumos ({{ count($predicciones) - 3 }} más)';
 }
-
+document.getElementById('mapreduceCollapse')?.addEventListener('show.bs.collapse', function () {
+    document.querySelector('[data-bs-target="#mapreduceCollapse"] i').className = 'fas fa-chevron-up me-1';
+    document.querySelector('[data-bs-target="#mapreduceCollapse"]').innerHTML = 
+        '<i class="fas fa-chevron-up me-1"></i> Ocultar tabla';
+});
+document.getElementById('mapreduceCollapse')?.addEventListener('hide.bs.collapse', function () {
+    document.querySelector('[data-bs-target="#mapreduceCollapse"]').innerHTML = 
+        '<i class="fas fa-chevron-down me-1"></i> Ver tabla';
+});
 
 </script>
 
@@ -394,7 +493,35 @@ function toggleDetalle() {
     box-shadow: 0 4px 12px rgba(139,69,19,.1);
 }
 
-
+.mapreduce-ranking-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 6px 0;
+    border-bottom: 1px dashed #f0e4d4;
+}
+.mapreduce-ranking-item:last-child {
+    border-bottom: none;
+}
+.mapreduce-pos {
+    background: linear-gradient(135deg, #8B4513, #A0522D);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: .8rem;
+    font-weight: 700;
+    min-width: 32px;
+    text-align: center;
+}
+.mapreduce-detail {
+    color: #8B6B4F;
+    font-size: .85rem;
+    background: #f8f4f0;
+    padding: 2px 10px;
+    border-radius: 20px;
+    border: 1px solid #e8d5c0;
+}
 </style>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
