@@ -1,31 +1,31 @@
 [
     {
         "insumo": "Huevos",
-        "total_consumido": 62.0,
+        "total_consumido": 64.0,
         "ranking_productos": [
             {
                 "posicion": 1,
                 "producto": "Pastel de Zanahoria",
-                "cantidad_vendida": 31.0,
-                "consumo_estimado": 62.0
+                "cantidad_vendida": 32.0,
+                "consumo_estimado": 64.0
             }
         ]
     },
     {
         "insumo": "Leche",
-        "total_consumido": 51.68,
+        "total_consumido": 52.58,
         "ranking_productos": [
             {
                 "posicion": 1,
                 "producto": "Chocolate Caliente Especial",
-                "cantidad_vendida": 85.0,
-                "consumo_estimado": 25.5
+                "cantidad_vendida": 87.0,
+                "consumo_estimado": 26.1
             },
             {
                 "posicion": 2,
                 "producto": "Té Chai Latte",
-                "cantidad_vendida": 60.0,
-                "consumo_estimado": 18.0
+                "cantidad_vendida": 61.0,
+                "consumo_estimado": 18.3
             },
             {
                 "posicion": 3,
@@ -85,37 +85,37 @@
     },
     {
         "insumo": "Hielo",
-        "total_consumido": 3.45,
+        "total_consumido": 3.6,
         "ranking_productos": [
             {
                 "posicion": 1,
                 "producto": "Americano con Hielo",
-                "cantidad_vendida": 23.0,
-                "consumo_estimado": 3.45
+                "cantidad_vendida": 24.0,
+                "consumo_estimado": 3.6
             }
         ]
     },
     {
         "insumo": "Chocolate en polvo",
-        "total_consumido": 2.12,
+        "total_consumido": 2.17,
         "ranking_productos": [
             {
                 "posicion": 1,
                 "producto": "Chocolate Caliente Especial",
-                "cantidad_vendida": 85.0,
-                "consumo_estimado": 2.12
+                "cantidad_vendida": 87.0,
+                "consumo_estimado": 2.17
             }
         ]
     },
     {
         "insumo": "Crema batida",
-        "total_consumido": 2.1,
+        "total_consumido": 2.14,
         "ranking_productos": [
             {
                 "posicion": 1,
                 "producto": "Chocolate Caliente Especial",
-                "cantidad_vendida": 85.0,
-                "consumo_estimado": 1.7
+                "cantidad_vendida": 87.0,
+                "consumo_estimado": 1.74
             },
             {
                 "posicion": 2,
@@ -139,19 +139,19 @@
     },
     {
         "insumo": "Café espresso",
-        "total_consumido": 1.42,
+        "total_consumido": 1.49,
         "ranking_productos": [
             {
                 "posicion": 1,
                 "producto": "Americano con Hielo",
-                "cantidad_vendida": 23.0,
-                "consumo_estimado": 0.41
+                "cantidad_vendida": 24.0,
+                "consumo_estimado": 0.43
             },
             {
                 "posicion": 2,
                 "producto": "Café Americano",
-                "cantidad_vendida": 21.0,
-                "consumo_estimado": 0.38
+                "cantidad_vendida": 24.0,
+                "consumo_estimado": 0.43
             },
             {
                 "posicion": 3,
@@ -175,13 +175,13 @@
     },
     {
         "insumo": "Zanahoria",
-        "total_consumido": 1.24,
+        "total_consumido": 1.28,
         "ranking_productos": [
             {
                 "posicion": 1,
                 "producto": "Pastel de Zanahoria",
-                "cantidad_vendida": 31.0,
-                "consumo_estimado": 1.24
+                "cantidad_vendida": 32.0,
+                "consumo_estimado": 1.28
             }
         ]
     },
@@ -211,49 +211,49 @@
     },
     {
         "insumo": "Harina de trigo",
-        "total_consumido": 0.93,
+        "total_consumido": 0.96,
         "ranking_productos": [
             {
                 "posicion": 1,
                 "producto": "Pastel de Zanahoria",
-                "cantidad_vendida": 31.0,
-                "consumo_estimado": 0.93
+                "cantidad_vendida": 32.0,
+                "consumo_estimado": 0.96
             }
         ]
     },
     {
         "insumo": "Malvaviscos",
-        "total_consumido": 0.85,
+        "total_consumido": 0.87,
         "ranking_productos": [
             {
                 "posicion": 1,
                 "producto": "Chocolate Caliente Especial",
-                "cantidad_vendida": 85.0,
-                "consumo_estimado": 0.85
+                "cantidad_vendida": 87.0,
+                "consumo_estimado": 0.87
             }
         ]
     },
     {
         "insumo": "Té chai",
-        "total_consumido": 0.6,
+        "total_consumido": 0.61,
         "ranking_productos": [
             {
                 "posicion": 1,
                 "producto": "Té Chai Latte",
-                "cantidad_vendida": 60.0,
-                "consumo_estimado": 0.6
+                "cantidad_vendida": 61.0,
+                "consumo_estimado": 0.61
             }
         ]
     },
     {
         "insumo": "Azúcar",
-        "total_consumido": 0.6,
+        "total_consumido": 0.61,
         "ranking_productos": [
             {
                 "posicion": 1,
                 "producto": "Té Chai Latte",
-                "cantidad_vendida": 60.0,
-                "consumo_estimado": 0.6
+                "cantidad_vendida": 61.0,
+                "consumo_estimado": 0.61
             }
         ]
     },
@@ -283,49 +283,49 @@
     },
     {
         "insumo": "Queso crema",
-        "total_consumido": 0.46,
+        "total_consumido": 0.48,
         "ranking_productos": [
             {
                 "posicion": 1,
                 "producto": "Pastel de Zanahoria",
-                "cantidad_vendida": 31.0,
-                "consumo_estimado": 0.46
+                "cantidad_vendida": 32.0,
+                "consumo_estimado": 0.48
             }
         ]
     },
     {
         "insumo": "Aceite vegetal",
-        "total_consumido": 0.31,
+        "total_consumido": 0.32,
         "ranking_productos": [
             {
                 "posicion": 1,
                 "producto": "Pastel de Zanahoria",
-                "cantidad_vendida": 31.0,
-                "consumo_estimado": 0.31
+                "cantidad_vendida": 32.0,
+                "consumo_estimado": 0.32
             }
         ]
     },
     {
         "insumo": "Nuez",
-        "total_consumido": 0.31,
+        "total_consumido": 0.32,
         "ranking_productos": [
             {
                 "posicion": 1,
                 "producto": "Pastel de Zanahoria",
-                "cantidad_vendida": 31.0,
-                "consumo_estimado": 0.31
+                "cantidad_vendida": 32.0,
+                "consumo_estimado": 0.32
             }
         ]
     },
     {
         "insumo": "Cardamomo",
-        "total_consumido": 0.3,
+        "total_consumido": 0.31,
         "ranking_productos": [
             {
                 "posicion": 1,
                 "producto": "Té Chai Latte",
-                "cantidad_vendida": 60.0,
-                "consumo_estimado": 0.3
+                "cantidad_vendida": 61.0,
+                "consumo_estimado": 0.31
             }
         ]
     },
@@ -384,7 +384,7 @@
             {
                 "posicion": 1,
                 "producto": "Pastel de Zanahoria",
-                "cantidad_vendida": 31.0,
+                "cantidad_vendida": 32.0,
                 "consumo_estimado": 0.16
             }
         ]
@@ -408,7 +408,7 @@
             {
                 "posicion": 1,
                 "producto": "Té Chai Latte",
-                "cantidad_vendida": 60.0,
+                "cantidad_vendida": 61.0,
                 "consumo_estimado": 0.06
             }
         ]
@@ -420,7 +420,7 @@
             {
                 "posicion": 1,
                 "producto": "Té Chai Latte",
-                "cantidad_vendida": 60.0,
+                "cantidad_vendida": 61.0,
                 "consumo_estimado": 0.06
             }
         ]
@@ -432,7 +432,7 @@
             {
                 "posicion": 1,
                 "producto": "Pastel de Zanahoria",
-                "cantidad_vendida": 31.0,
+                "cantidad_vendida": 32.0,
                 "consumo_estimado": 0.06
             }
         ]
@@ -444,7 +444,7 @@
             {
                 "posicion": 1,
                 "producto": "Pastel de Zanahoria",
-                "cantidad_vendida": 31.0,
+                "cantidad_vendida": 32.0,
                 "consumo_estimado": 0.03
             }
         ]

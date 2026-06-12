@@ -164,87 +164,7 @@
 </div>
 @endif
 
-    <!-- ===== SECCIÓN ML ===== -->
-@if($mlStats)
-<div class="ml-section mt-4">
-    <h5 class="detalle-titulo">
-        <i class="fas fa-robot me-2" style="color:#8B4513;"></i>
-        Predicción de Ventas con IA
-    </h5>
 
-    <!-- Métricas del modelo -->
-    <div class="resumen-ventas mb-4">
-        <div class="resumen-card">
-            <div class="card-icono" style="background: linear-gradient(145deg,#8B4513,#A0522D);">
-                <i class="fas fa-brain"></i>
-            </div>
-            <div class="card-contenido">
-                <span class="card-label">Precisión del modelo</span>
-                <span class="card-valor">{{ number_format($mlStats['accuracy'] * 100, 1) }}%</span>
-            </div>
-        </div>
-        <div class="resumen-card">
-            <div class="card-icono" style="background: linear-gradient(145deg,#D4AF37,#c9a227);">
-                <i class="fas fa-database"></i>
-            </div>
-            <div class="card-contenido">
-                <span class="card-label">Ventas analizadas</span>
-                <span class="card-valor">{{ number_format($mlStats['total_registros']) }}</span>
-            </div>
-        </div>
-        <div class="resumen-card">
-            <div class="card-icono" style="background: linear-gradient(145deg,#28a745,#218838);">
-                <i class="fas fa-ruler-horizontal"></i>
-            </div>
-            <div class="card-contenido">
-                <span class="card-label">Umbral venta alta</span>
-                <span class="card-valor">${{ number_format($mlStats['umbral'], 2) }}</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Formulario de predicción -->
-    <div class="grafico-card">
-        <h6 class="grafico-titulo">
-            <i class="fas fa-magic me-2"></i> Simular una venta
-        </h6>
-        <div class="row g-3 align-items-end">
-            <div class="col-md-4">
-                <label class="form-label" style="color:#5D4037;font-weight:600;">Cantidad</label>
-                <input type="number" id="ml-cantidad" class="form-control" min="1" value="3">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label" style="color:#5D4037;font-weight:600;">Precio unitario ($)</label>
-                <input type="number" id="ml-precio" class="form-control" min="1" value="90">
-            </div>
-            <div class="col-md-4">
-                <button id="btn-predecir" class="btn w-100" style="background:#8B4513;color:white;border-radius:50px;padding:10px 20px;font-weight:600;">
-                    <i class="fas fa-bolt me-2"></i> Predecir
-                </button>
-            </div>
-        </div>
-
-        <!-- Resultado -->
-        <div id="ml-resultado" class="mt-4" style="display:none;">
-            <div id="ml-resultado-inner" class="p-4 rounded-4 text-center">
-                <div id="ml-icono" style="font-size:3rem;"></div>
-                <div id="ml-texto" style="font-size:1.4rem;font-weight:700;margin-top:10px;"></div>
-                <div id="ml-detalle" style="font-size:0.95rem;margin-top:5px;opacity:0.8;"></div>
-            </div>
-        </div>
-
-        <div id="ml-loading" style="display:none;" class="text-center mt-4">
-            <div class="spinner-border" style="color:#8B4513;"></div>
-            <p class="mt-2" style="color:#8B4513;">Consultando modelo...</p>
-        </div>
-    </div>
-</div>
-@else
-<div class="mt-4 p-4 rounded-4 text-center" style="background:#fff8f0;border:1px dashed #d9b382;">
-    <i class="fas fa-robot fa-2x mb-2" style="color:#d9b382;"></i>
-    <p style="color:#8B6B4F;margin:0;">El modelo ML no está disponible. Ejecuta <code>python ml_trainer.py</code> en WSL.</p>
-</div>
-@endif
 
 {{-- ===== TABLA CLIENTES FRECUENTES DEL MES ===== --}}
 @if(count($clientesFrecuentes) > 0)
@@ -386,6 +306,93 @@
     <p class="text-muted mt-2" style="font-size:0.8rem;text-align:right;">
         <i class="fas fa-info-circle me-1"></i>
         Predicción basada en el promedio de ventas semanales del último mes + tendencia del 5%
+    </p>
+</div>
+@endif
+
+{{-- ===== COMBOS RECOMENDADOS (K-Means) ===== --}}
+@if(count($combos) > 0)
+<div class="ml-section mt-4">
+    <h5 class="detalle-titulo">
+        <i class="fas fa-layer-group me-2" style="color:#8B4513;"></i>
+        Combos Recomendados
+        <small class="ms-2" style="font-size:0.75rem;color:#a0856b;font-weight:400;">
+            Análisis de historial de ventas · Top {{ count($combos) }}
+        </small>
+    </h5>
+    <div class="grafico-card">
+        <div class="table-responsive">
+            <table class="table detalle-table">
+                <thead>
+                    <tr>
+                        <th style="width:60px;">Pos.</th>
+                        <th>Combo</th>
+                        <th class="text-center">Frecuencia</th>
+                        <th class="text-center">% Apariciones</th>
+                        <th class="text-end">Precio normal</th>
+                        <th class="text-center">Descuento</th>
+                        <th class="text-end">Precio sugerido</th>
+                        <th class="text-end">Ahorro</th>
+                        <th>Recomendación</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($combos as $item)
+                    <tr>
+                        <td data-label="Pos.">
+                            @if($item['posicion'] == 1)
+                                <span style="font-size:1.3rem;">🥇</span>
+                            @elseif($item['posicion'] == 2)
+                                <span style="font-size:1.3rem;">🥈</span>
+                            @elseif($item['posicion'] == 3)
+                                <span style="font-size:1.3rem;">🥉</span>
+                            @else
+                                <span class="hora-badge">{{ $item['posicion'] }}</span>
+                            @endif
+                        </td>
+                        <td data-label="Combo">
+                            <span style="font-weight:600;color:#3E2723;">{{ $item['combo'] }}</span>
+                        </td>
+                        <td data-label="Frecuencia" class="text-center">
+                            <span class="mesa-badge">{{ $item['frecuencia'] }}</span>
+                        </td>
+                        <td data-label="% Apariciones" class="text-center">
+                            {{ $item['porcentaje_aparicion'] }}%
+                        </td>
+                        <td data-label="Precio normal" class="text-end">
+                            ${{ number_format($item['precio_normal'], 2) }}
+                        </td>
+                        <td data-label="Descuento" class="text-center">
+                            <span class="mesa-badge">{{ $item['descuento_sugerido'] }}%</span>
+                        </td>
+                        <td data-label="Precio sugerido" class="text-end">
+                            <span class="total-badge">${{ number_format($item['precio_combo_sugerido'], 2) }}</span>
+                        </td>
+                        <td data-label="Ahorro" class="text-end" style="color:#28a745;font-weight:700;">
+                            ${{ number_format($item['ahorro_cliente'], 2) }}
+                        </td>
+                        <td data-label="Recomendación">
+                            <span style="font-size:0.85rem;">{{ $item['recomendacion'] }}</span>
+                            <br>
+                            <small style="color:#a0856b;">{{ $item['recomendacion_tipo'] }}</small>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        <p class="text-muted mt-2" style="font-size:0.8rem;text-align:right;">
+            <i class="fas fa-info-circle me-1"></i>
+            Basado en {{ $combos[0]['ventas_analizadas'] ?? 0 }} ventas analizadas ·
+            {{ $combos[0]['ventas_con_dos_o_mas_productos'] ?? 0 }} con 2+ productos
+        </p>
+    </div>
+</div>
+@else
+<div class="mt-4 p-4 rounded-4 text-center" style="background:#fff8f0;border:1px dashed #d9b382;">
+    <i class="fas fa-layer-group fa-2x mb-2" style="color:#d9b382;"></i>
+    <p style="color:#8B6B4F;margin:0;">
+        Aún no hay combos detectados. Ejecuta el análisis de combos para generar recomendaciones.
     </p>
 </div>
 @endif

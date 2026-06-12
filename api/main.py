@@ -5,8 +5,9 @@ from bson import ObjectId
 from pyspark.ml.classification import DecisionTreeClassificationModel
 from pyspark.sql import SparkSession
 from pyspark.ml.feature import VectorAssembler
-from mapreduce import ejecutar_mapreduce_insumos
-from kmeans import ejecutar_kmeans_productos
+from ml_trainer import ejecutar_mapreduce_insumos, ejecutar_kmeans_productos
+
+
 
 import json as json_lib
 import config

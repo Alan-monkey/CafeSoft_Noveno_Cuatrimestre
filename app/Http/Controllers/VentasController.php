@@ -89,8 +89,16 @@ public function reportes()
 
     $prediccionResponse = $pythonApi->getPrediccionSemana();
     $prediccionSemana = $prediccionResponse['success'] ? $prediccionResponse['data'] : null;
+    $pathCombos = base_path('api/kmeans_productos.json');
 
-    return view('ventas.reportes', compact('user', 'ventasHoy', 'totalHoy', 'masVendidos', 'mlStats', 'clientesFrecuentes', 'productosMes', 'prediccionSemana'));
+    $combos = [];
+
+if (file_exists($pathCombos)) {
+    $combos = json_decode(file_get_contents($pathCombos), true) ?? [];
+}
+
+    return view('ventas.reportes', compact('user', 'ventasHoy', 'totalHoy', 'masVendidos', 'mlStats', 
+    'clientesFrecuentes', 'productosMes', 'prediccionSemana', 'prediccionSemana', 'combos'));
 }
 
 public function predecir(Request $request)
